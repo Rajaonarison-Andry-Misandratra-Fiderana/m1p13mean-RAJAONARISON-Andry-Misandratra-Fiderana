@@ -4,13 +4,14 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
+import { PRODUCTS as FALLBACK_PRODUCTS } from '../../mock/seed';
 
 @Component({
   selector: 'app-products-list',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './products-list.component.html',
-  styleUrls: ['./products-list.component.css']
+  styleUrls: ['./products-list.component.css'],
 })
 export class ProductsListComponent implements OnInit {
   products: Product[] = [];
@@ -24,7 +25,7 @@ export class ProductsListComponent implements OnInit {
 
   categories = ['Fashion', 'Electronics', 'Home & Garden', 'Books', 'Sports', 'Beauty'];
 
-  constructor(private productService: ProductService) { }
+  constructor(private productService: ProductService) {}
 
   ngOnInit(): void {
     this.loadProducts();
@@ -39,15 +40,19 @@ export class ProductsListComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        this.error = 'Failed to load products';
+        this.error = 'Failed to load products from API — using local fallback.';
+        // fallback to seeded products so the UI remains usable during dev
+        this.products = FALLBACK_PRODUCTS;
+        this.applyFilters();
         this.loading = false;
-      }
+      },
     });
   }
 
   applyFilters(): void {
-    this.filteredProducts = this.products.filter(product => {
-      const matchesSearch = !this.searchQuery ||
+    this.filteredProducts = this.products.filter((product) => {
+      const matchesSearch =
+        !this.searchQuery ||
         product.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
         product.description?.toLowerCase().includes(this.searchQuery.toLowerCase());
 
