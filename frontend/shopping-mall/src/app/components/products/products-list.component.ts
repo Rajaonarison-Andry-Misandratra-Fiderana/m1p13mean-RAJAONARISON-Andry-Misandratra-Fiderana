@@ -7,8 +7,10 @@ import { filter, takeUntil } from 'rxjs/operators';
 import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { SellerModerationService } from '../../services/seller-moderation.service';
 import { Product } from '../../models/product.model';
 import { PRODUCT_CATEGORIES } from '../../constants/categories';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-products-list',
@@ -37,6 +39,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private router: Router,
     private cartService: CartService,
+    private sellerModerationService: SellerModerationService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -48,6 +51,10 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     this.productService.refresh$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.loadProducts());
+
+    this.sellerModerationService.refresh$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyFilters());
 
     this.router.events
       .pipe(
@@ -114,6 +121,11 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     const normalizedSearch = this.normalizeText(this.searchQuery);
 
     this.filteredProducts = this.products.filter((product) => {
+      const sellerId = typeof product.shop === 'string' ? product.shop : getEntityId(product.shop);
+      if (sellerId && this.sellerModerationService.isSellerBanned(sellerId)) {
+        return false;
+      }
+
       const haystack = this.normalizeText(
         [
           product.name,

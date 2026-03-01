@@ -1,38 +1,42 @@
 <footer class="footer">
   <div class="footer-container">
     <div class="footer-content">
+      <!-- About Section -->
       <div class="footer-section">
-        <h3>About Shopping Mall</h3>
-        <p>Your ultimate destination for shopping online with multiple boutiques and vendors offering quality products.
+        <h3>À propos</h3>
+        <p>
+          Shopping Mall est votre destination ultime pour les achats en ligne,
+          avec de multiples boutiques et vendeurs proposant des produits de qualité.
         </p>
       </div>
 
+      <!-- Quick Links -->
       <div class="footer-section">
-        <h3>Quick Links</h3>
+        <h3>Liens rapides</h3>
         <ul>
-          <li><a href="#">Home</a></li>
-          <li><a href="#">Products</a></li>
-          <li><a href="#">About Us</a></li>
-          <li><a href="#">Contact</a></li>
+          <li><a routerLink="/">Accueil</a></li>
+          <li><a routerLink="/products">Produits</a></li>
+          <li><a routerLink="/about">À propos</a></li>
+          <li><a routerLink="/contact">Contact</a></li>
         </ul>
       </div>
 
+      <!-- Support -->
       <div class="footer-section">
         <h3>Support</h3>
         <ul>
-          <li><a href="#">Help Center</a></li>
-          <li><a href="#">Privacy Policy</a></li>
-          <li><a href="#">Terms & Conditions</a></li>
-          <li><a href="#">Contact Us</a></li>
+          <li><a routerLink="/help">Centre d'aide</a></li>
+          <li><a routerLink="/privacy">Politique de confidentialité</a></li>
+          <li><a routerLink="/terms">Conditions générales</a></li>
+          <li><a routerLink="/contact">Nous contacter</a></li>
         </ul>
       </div>
-
-
     </div>
 
+    <!-- Footer Bottom -->
     <div class="footer-bottom">
-      <p>&copy; {{ currentYear }} Shopping Mall. All rights reserved.</p>
-      <p class="credits">Developed by: <strong>RAJAONARISON Andry Misandratra Fiderana</strong></p>
+      <p>&copy; {{ currentYear }} Shopping Mall. Tous droits réservés.</p>
+      <p class="credits">Développé par <strong>RAJAONARISON Andry Misandratra Fiderana</strong></p>
     </div>
   </div>
 </footer>

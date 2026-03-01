@@ -1,201 +1,577 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PRODUCTS, USERS, VISITS } from '../../mock/seed';
+import { FormsModule } from '@angular/forms';
+import { Subject, forkJoin, merge, of, timer } from 'rxjs';
+import { catchError, takeUntil } from 'rxjs/operators';
 import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
+import { OrderService } from '../../services/order.service';
+import { Product } from '../../models/product.model';
+import { User } from '../../models/user.model';
+import { Order } from '../../models/order.model';
+import { getEntityId } from '../../utils/id.util';
+
+type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+type PaymentStatus = 'pending' | 'completed' | 'failed';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
-    <div class="container">
-      <h1>Admin Dashboard</h1>
-      <div class="admin-actions">
-        <button (click)="seedBackend()" [disabled]="seeding">Seed backend</button>
-        <span *ngIf="seedStatus">{{ seedStatus }}</span>
+    <section class="admin-page">
+      <header class="page-head">
+        <div>
+          <h1>Tableau de bord Admin</h1>
+          <p>Vue globale utilisateurs, produits, commandes et opérations.</p>
+        </div>
+        <button type="button" class="btn-refresh" (click)="loadDashboard()" [disabled]="loading">
+          Actualiser
+        </button>
+      </header>
+
+      <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+
+      <div class="stats-grid" *ngIf="!loading">
+        <article class="stat-card">
+          <p class="label">Utilisateurs</p>
+          <p class="value">{{ users.length }}</p>
+          <p class="meta">Admins {{ adminsCount }} • Boutiques {{ boutiquesCount }} • Acheteurs {{ buyersCount }}</p>
+        </article>
+
+        <article class="stat-card">
+          <p class="label">Produits</p>
+          <p class="value">{{ products.length }}</p>
+          <p class="meta">Stock total {{ totalStock }}</p>
+        </article>
+
+        <article class="stat-card">
+          <p class="label">Commandes</p>
+          <p class="value">{{ orders.length }}</p>
+          <p class="meta">En attente {{ pendingOrdersCount }}</p>
+        </article>
+
+        <article class="stat-card success">
+          <p class="label">Revenu payé</p>
+          <p class="value">{{ paidRevenue | number: '1.0-0' }} MGA</p>
+          <p class="meta">Total global</p>
+        </article>
       </div>
 
-      <div class="stats">
-        <div class="stat">Visits total: {{ visits.total }}</div>
-        <div class="stat">Visitors today: {{ visits.today }}</div>
-        <div class="stat">Buyers: {{ buyersCount }}</div>
-        <div class="stat">Sellers: {{ sellersCount }}</div>
-        <div class="stat">Products: {{ products.length }}</div>
-      </div>
+      <div *ngIf="loading" class="panel">Chargement des données admin...</div>
 
-      <h2>Products</h2>
-      <ul>
-        <li *ngFor="let p of products">
-          {{ p.name }} — {{ p.price | number: '1.0-0' }} MGA
-          <button (click)="deleteProduct(p.id)">Supprimer</button>
-        </li>
-      </ul>
+      <section *ngIf="!loading" class="grid-2">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Dernières commandes</h2>
+          </div>
 
-      <h2>Vendeurs</h2>
-      <ul>
-        <li *ngFor="let u of sellers">
-          {{ u.name }} ({{ u.email }})
-          <button (click)="deleteSeller(u.id)">Supprimer vendeur</button>
-        </li>
-      </ul>
-    </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Acheteur</th>
+                  <th>Montant</th>
+                  <th>Statut</th>
+                  <th>Paiement</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let order of recentOrders">
+                  <td>{{ order.orderNumber || getEntityId(order) }}</td>
+                  <td>{{ getBuyerLabel(order) }}</td>
+                  <td>{{ order.totalAmount | number: '1.0-0' }} MGA</td>
+                  <td>
+                    <select
+                      [(ngModel)]="order.status"
+                      [disabled]="savingOrders.has(getEntityId(order))"
+                    >
+                      <option value="pending">pending</option>
+                      <option value="confirmed">confirmed</option>
+                      <option value="shipped">shipped</option>
+                      <option value="delivered">delivered</option>
+                      <option value="cancelled">cancelled</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select
+                      [(ngModel)]="order.paymentStatus"
+                      [disabled]="savingOrders.has(getEntityId(order))"
+                    >
+                      <option value="pending">pending</option>
+                      <option value="completed">completed</option>
+                      <option value="failed">failed</option>
+                    </select>
+                  </td>
+                  <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn-inline"
+                      (click)="saveOrder(order)"
+                      [disabled]="!getEntityId(order) || savingOrders.has(getEntityId(order))"
+                    >
+                      Enregistrer
+                    </button>
+                  </td>
+                </tr>
+
+                <tr *ngIf="recentOrders.length === 0">
+                  <td colspan="7" class="empty">Aucune commande.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Utilisateurs récents</h2>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Email</th>
+                  <th>Rôle</th>
+                  <th>Inscription</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of recentUsers">
+                  <td>{{ user.name || '-' }}</td>
+                  <td>{{ user.email }}</td>
+                  <td>{{ user.role }}</td>
+                  <td>{{ getUserCreatedAt(user) | date: 'dd/MM/yyyy HH:mm' }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn-delete"
+                      (click)="deleteUser(user)"
+                      [disabled]="isCurrentAdmin(user) || savingUsers.has(getEntityId(user))"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="recentUsers.length === 0">
+                  <td colspan="5" class="empty">Aucun utilisateur.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section *ngIf="!loading" class="panel">
+        <div class="panel-head">
+          <h2>Produits récents</h2>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Boutique</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of recentProducts">
+                <td>{{ p.name }}</td>
+                <td>{{ getShopLabel(p) }}</td>
+                <td>{{ p.category || '-' }}</td>
+                <td>{{ p.price | number: '1.0-0' }} MGA</td>
+                <td>{{ p.stock }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn-delete"
+                    (click)="deleteProduct(p)"
+                    [disabled]="savingProducts.has(getEntityId(p))"
+                  >
+                    Supprimer
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="recentProducts.length === 0">
+                <td colspan="6" class="empty">Aucun produit.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
   `,
   styles: [
-    '.container { padding: 2rem } .stats{display:flex;gap:1rem;margin-bottom:1rem} .stat{background:#f4f4f4;padding:0.5rem;border-radius:4px}',
+    `
+      .admin-page {
+        max-width: 1240px;
+        margin: 1.4rem auto;
+        padding: 0 1rem;
+      }
+      .page-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.8rem;
+      }
+      .page-head h1 {
+        margin: 0;
+        color: #10243a;
+      }
+      .page-head p {
+        margin: 0.25rem 0 0;
+        color: #4f6b84;
+      }
+      .btn-refresh {
+        border: 0;
+        border-radius: 10px;
+        padding: 0.6rem 0.9rem;
+        background: linear-gradient(120deg, #0f5e9c, #0d86b8);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .alert {
+        margin-top: 0.9rem;
+        border-radius: 12px;
+        padding: 0.8rem 1rem;
+      }
+      .alert-error {
+        color: #8f2525;
+        border: 1px solid #f2c8c8;
+        background: #fdeaea;
+      }
+      .stats-grid {
+        margin-top: 0.9rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+      .stat-card {
+        border: 1px solid #d8e5f0;
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.85rem 0.9rem;
+      }
+      .stat-card.success {
+        border-color: #c7e8da;
+        background: #eefcf6;
+      }
+      .label {
+        margin: 0;
+        color: #58718a;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      .value {
+        margin: 0.2rem 0 0;
+        color: #112940;
+        font-size: 1.3rem;
+        font-weight: 800;
+      }
+      .meta {
+        margin: 0.22rem 0 0;
+        color: #59728a;
+        font-size: 0.8rem;
+      }
+      .panel {
+        margin-top: 0.9rem;
+        border: 1px solid #d8e5f0;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(11, 42, 70, 0.06);
+        padding: 0.9rem;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem;
+      }
+      .panel-head h2 {
+        margin: 0 0 0.7rem;
+        color: #10243a;
+        font-size: 1.05rem;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px;
+      }
+      thead th {
+        text-align: left;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #5b748d;
+        border-bottom: 1px solid #dce8f2;
+        padding: 0.65rem 0.45rem;
+      }
+      tbody td {
+        padding: 0.62rem 0.45rem;
+        border-bottom: 1px solid #ebf2f8;
+        color: #12304c;
+        font-weight: 600;
+      }
+      select {
+        border: 1px solid #c9dced;
+        border-radius: 8px;
+        padding: 0.28rem 0.42rem;
+        font: inherit;
+      }
+      .btn-inline,
+      .btn-delete {
+        border: 0;
+        border-radius: 8px;
+        padding: 0.4rem 0.52rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .btn-inline {
+        background: #e8f5ff;
+        color: #0d4f84;
+      }
+      .btn-delete {
+        background: #fdecec;
+        color: #992f2f;
+      }
+      .empty {
+        text-align: center;
+        color: #5d768f;
+        padding: 1rem;
+      }
+      @media (max-width: 1020px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 600px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
   ],
 })
-export class AdminDashboardComponent implements OnInit {
-  products = [...PRODUCTS];
-  users = [...USERS];
-  visits = VISITS;
+export class AdminDashboardComponent implements OnInit, OnDestroy {
+  users: User[] = [];
+  products: Product[] = [];
+  orders: Order[] = [];
 
-  sellers = this.users.filter((u) => u.role === 'boutique');
-  buyersCount = this.users.filter((u) => u.role === 'acheteur').length;
-  sellersCount = this.sellers.length;
+  loading = true;
+  error = '';
 
-  seeding = false;
-  seedStatus = '';
+  savingOrders = new Set<string>();
+  savingUsers = new Set<string>();
+  savingProducts = new Set<string>();
+
+  private currentAdminId = '';
+  private destroy$ = new Subject<void>();
 
   constructor(
-    private productService: ProductService,
     private authService: AuthService,
+    private productService: ProductService,
+    private orderService: OrderService,
   ) {}
 
-  ngOnInit(): void {}
+  readonly getEntityId = getEntityId;
 
-  deleteProduct(id?: string): void {
+  ngOnInit(): void {
+    this.currentAdminId = getEntityId(this.authService.currentUserValue);
+    this.loadDashboard();
+
+    merge(
+      this.authService.usersRefresh$,
+      this.productService.refresh$,
+      this.orderService.refresh$,
+      timer(15000, 15000),
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadDashboard(false));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  get adminsCount(): number {
+    return this.users.filter((u) => u.role === 'admin').length;
+  }
+
+  get boutiquesCount(): number {
+    return this.users.filter((u) => u.role === 'boutique').length;
+  }
+
+  get buyersCount(): number {
+    return this.users.filter((u) => u.role === 'acheteur').length;
+  }
+
+  get totalStock(): number {
+    return this.products.reduce((sum, p) => sum + (p.stock || 0), 0);
+  }
+
+  get pendingOrdersCount(): number {
+    return this.orders.filter((o) => o.status === 'pending').length;
+  }
+
+  get paidRevenue(): number {
+    return this.orders
+      .filter((o) => o.paymentStatus === 'completed')
+      .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  }
+
+  get recentOrders(): Order[] {
+    return [...this.orders]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 12);
+  }
+
+  get recentUsers(): User[] {
+    return [...this.users]
+      .sort((a, b) => this.getUserCreatedAt(b).getTime() - this.getUserCreatedAt(a).getTime())
+      .slice(0, 10);
+  }
+
+  get recentProducts(): Product[] {
+    return [...this.products]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 12);
+  }
+
+  loadDashboard(showLoader = true): void {
+    if (showLoader) this.loading = true;
+    this.error = '';
+
+    forkJoin({
+      users: this.authService.getAllUsers().pipe(catchError(() => of([] as User[]))),
+      products: this.productService.getProducts().pipe(catchError(() => of([] as Product[]))),
+      orders: this.orderService.getAllOrders().pipe(catchError(() => of([] as Order[]))),
+    }).subscribe({
+      next: ({ users, products, orders }) => {
+        this.users = this.normalizeUsersResponse(users as unknown);
+        this.products = Array.isArray(products) ? products : [];
+        this.orders = Array.isArray(orders) ? orders : [];
+        this.loading = false;
+      },
+      error: (err) => {
+        this.error = err?.error?.message || 'Impossible de charger les données admin.';
+        this.loading = false;
+      },
+    });
+  }
+
+  saveOrder(order: Order): void {
+    const id = getEntityId(order);
     if (!id) return;
-    if (!confirm('Delete product ' + id + '?')) return;
-    // attempt backend delete, but also remove locally
+
+    const status = order.status as OrderStatus;
+    const paymentStatus = order.paymentStatus as PaymentStatus;
+
+    this.savingOrders.add(id);
+
+    forkJoin({
+      status: this.orderService.updateOrderStatus(id, { status }),
+      payment: this.orderService.updatePaymentStatus(id, { paymentStatus }),
+    }).subscribe({
+      next: () => {
+        this.savingOrders.delete(id);
+        this.loadDashboard(false);
+      },
+      error: (err) => {
+        this.savingOrders.delete(id);
+        this.error = err?.error?.message || 'Échec de mise à jour de la commande.';
+      },
+    });
+  }
+
+  deleteProduct(product: Product): void {
+    const id = getEntityId(product);
+    if (!id) return;
+    if (!confirm(`Supprimer le produit ${product.name} ?`)) return;
+
+    this.savingProducts.add(id);
     this.productService.deleteProduct(id).subscribe({
       next: () => {
-        this.products = this.products.filter((p) => p.id !== id);
+        this.savingProducts.delete(id);
+        this.loadDashboard(false);
       },
-      error: () => {
-        // backend may not be available during dev; still remove locally
-        this.products = this.products.filter((p) => p.id !== id);
-        alert('Product removed locally (backend delete failed).');
+      error: (err) => {
+        this.savingProducts.delete(id);
+        this.error = err?.error?.message || 'Échec suppression produit.';
       },
     });
   }
 
-  deleteSeller(id?: string): void {
-    if (!id) return;
-    if (!confirm('Delete seller ' + id + ' and their products?')) return;
-    // remove seller locally
-    this.users = this.users.filter((u) => u.id !== id);
-    this.sellers = this.users.filter((u) => u.role === 'boutique');
-    this.products = this.products.filter((p) => (p.shop as any)?.id !== id);
-    this.sellersCount = this.sellers.length;
-    this.buyersCount = this.users.filter((u) => u.role === 'acheteur').length;
-    alert('Seller removed locally. Backend removal not implemented in frontend.');
+  deleteUser(user: User): void {
+    const id = getEntityId(user);
+    if (!id || this.isCurrentAdmin(user)) return;
+    if (!confirm(`Supprimer l'utilisateur ${user.email} ?`)) return;
+
+    this.savingUsers.add(id);
+    this.authService.deleteUser(id).subscribe({
+      next: () => {
+        this.savingUsers.delete(id);
+        this.loadDashboard(false);
+      },
+      error: (err) => {
+        this.savingUsers.delete(id);
+        this.error = err?.error?.message || 'Échec suppression utilisateur.';
+      },
+    });
   }
 
-  seedBackend(): void {
-    if (
-      !confirm(
-        'Seed backend with demo users and products? This will attempt to create users and products on the backend.',
-      )
-    )
-      return;
-    this.seeding = true;
-    this.seedStatus = 'Seeding users...';
-    const password = 'Password123!';
-
-    // create users sequentially to better handle tokens
-    const tryCreateUser = (index: number) => {
-      if (index >= USERS.length) {
-        this.seedStatus = 'Users created. Seeding products for seller...';
-        // find seller and create products
-        const seller = USERS.find((u) => u.role === 'boutique');
-        if (seller) {
-          // attempt login as seller to get token
-          this.authService.login({ email: seller.email, password }).subscribe({
-            next: () => this.createProductsForSeller(seller),
-            error: () => {
-              // if login fails, try signup for seller specifically
-              this.authService
-                .signup({ name: seller.name, email: seller.email, password, role: 'boutique' })
-                .subscribe({
-                  next: () => this.createProductsForSeller(seller),
-                  error: () => {
-                    this.seedStatus = 'Failed to obtain seller credentials.';
-                    this.seeding = false;
-                  },
-                });
-            },
-          });
-        } else {
-          this.seedStatus = 'No seller in seed data.';
-          this.seeding = false;
-        }
-        return;
-      }
-
-      const u = USERS[index];
-      this.authService
-        .signup({ name: u.name, email: u.email, password, role: u.role as any })
-        .subscribe({
-          next: () => {
-            this.seedStatus = `Created user ${u.email}`;
-            tryCreateUser(index + 1);
-          },
-          error: () => {
-            // possibly already exists — try login and continue
-            this.authService.login({ email: u.email, password }).subscribe({
-              next: () => {
-                tryCreateUser(index + 1);
-              },
-              error: () => {
-                this.seedStatus = `Failed for user ${u.email}`;
-                tryCreateUser(index + 1);
-              },
-            });
-          },
-        });
-    };
-
-    tryCreateUser(0);
+  isCurrentAdmin(user: User): boolean {
+    const id = getEntityId(user);
+    return !!id && id === this.currentAdminId;
   }
 
-  createProductsForSeller(seller: any): void {
-    const prods = PRODUCTS.filter((p) => (p.shop as any)?.id === seller.id);
-    if (!prods.length) {
-      this.seedStatus = 'No products to seed';
-      this.seeding = false;
-      return;
+  getBuyerLabel(order: Order): string {
+    if (!order.buyer) return '-';
+    if (typeof order.buyer === 'string') return order.buyer;
+    return order.buyer.name || order.buyer.email || getEntityId(order.buyer);
+  }
+
+  getShopLabel(product: Product): string {
+    if (!product.shop) return '-';
+    if (typeof product.shop === 'string') return product.shop;
+    return product.shop.name || product.shop.email || getEntityId(product.shop);
+  }
+
+  getUserCreatedAt(user: User): Date {
+    if (user.createdAt) {
+      const direct = new Date(user.createdAt);
+      if (!Number.isNaN(direct.getTime())) return direct;
     }
-    this.seedStatus = 'Seeding products...';
-    let completed = 0;
-    prods.forEach((p) => {
-      const payload: any = {
-        name: p.name,
-        price: p.price,
-        stock: p.stock,
-        description: p.description,
-        category: p.category,
-      };
-      // include image if present
-      if (p.image) payload.image = p.image;
-      this.productService.createProduct(payload).subscribe({
-        next: (created) => {
-          this.products.push(created);
-          completed++;
-          if (completed === prods.length) {
-            this.seedStatus = 'Seeding complete';
-            this.seeding = false;
-          }
-        },
-        error: () => {
-          this.products.push(p as any);
-          completed++;
-          if (completed === prods.length) {
-            this.seedStatus = 'Seeding complete (with local fallbacks)';
-            this.seeding = false;
-          }
-        },
-      });
-    });
+
+    const id = getEntityId(user);
+    if (!id || id.length < 8) return new Date(0);
+    const ts = Number.parseInt(id.slice(0, 8), 16);
+    if (Number.isNaN(ts)) return new Date(0);
+    return new Date(ts * 1000);
+  }
+
+  private normalizeUsersResponse(value: unknown): User[] {
+    if (Array.isArray(value)) return value as User[];
+    const maybeObject = value as { users?: User[] };
+    if (Array.isArray(maybeObject?.users)) return maybeObject.users;
+    return [];
   }
 }

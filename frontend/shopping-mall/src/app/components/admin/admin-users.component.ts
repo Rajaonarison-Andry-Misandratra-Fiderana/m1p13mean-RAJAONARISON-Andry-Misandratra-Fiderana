@@ -1,76 +1,50 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { Subject, merge, timer } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
+import { ProductService } from '../../services/product.service';
+import { SellerModerationService } from '../../services/seller-moderation.service';
 import { User } from '../../models/user.model';
+import { Product } from '../../models/product.model';
 import { getEntityId } from '../../utils/id.util';
 
-type Role = 'admin' | 'boutique' | 'acheteur';
-
-type UserRow = {
+type SellerRow = {
   user: User;
   id: string;
-  createdAt: Date | null;
-  roleDraft: Role;
+  createdAt: Date;
 };
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
-    <section class="users-page">
+    <section class="sellers-page">
       <header class="page-head">
         <div>
-          <h1>Gestion des utilisateurs</h1>
-          <p>Liste complète des comptes, rôles et informations d'inscription.</p>
+          <h1>Gestion des vendeurs</h1>
+          <p>Utilisateurs avec rôle vendeur, bannissement et historique de publication.</p>
         </div>
-
-        <button type="button" class="btn-refresh" (click)="loadUsers()" [disabled]="loading">
+        <button type="button" class="btn-refresh" (click)="loadSellers(true)" [disabled]="loading">
           Actualiser
         </button>
       </header>
 
+      <div *ngIf="error" class="panel error">{{ error }}</div>
+
       <div class="stats-grid" *ngIf="!loading && !error">
         <article class="stat-card">
-          <p class="label">Total utilisateurs</p>
-          <p class="value">{{ rows.length }}</p>
+          <p class="label">Vendeurs actifs</p>
+          <p class="value">{{ sellers.length }}</p>
         </article>
         <article class="stat-card">
-          <p class="label">Admins</p>
-          <p class="value">{{ countByRole('admin') }}</p>
-        </article>
-        <article class="stat-card">
-          <p class="label">Boutiques</p>
-          <p class="value">{{ countByRole('boutique') }}</p>
-        </article>
-        <article class="stat-card">
-          <p class="label">Acheteurs</p>
-          <p class="value">{{ countByRole('acheteur') }}</p>
+          <p class="label">Vendeurs bannis (session)</p>
+          <p class="value">{{ bannedSellers.length }}</p>
         </article>
       </div>
 
-      <div class="toolbar" *ngIf="!loading && !error">
-        <input
-          class="search-input"
-          type="text"
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="applyFilters()"
-          placeholder="Rechercher par nom/email..."
-        />
-
-        <select class="role-filter" [(ngModel)]="roleFilter" (ngModelChange)="applyFilters()">
-          <option value="">Tous les rôles</option>
-          <option value="admin">Admin</option>
-          <option value="boutique">Boutique</option>
-          <option value="acheteur">Acheteur</option>
-        </select>
-      </div>
-
-      <div *ngIf="loading" class="panel">Chargement des utilisateurs...</div>
-      <div *ngIf="error" class="panel error">{{ error }}</div>
+      <div *ngIf="loading" class="panel">Chargement des vendeurs...</div>
 
       <div class="table-wrap" *ngIf="!loading && !error">
         <table>
@@ -78,63 +52,120 @@ type UserRow = {
             <tr>
               <th>Nom</th>
               <th>Email</th>
-              <th>Rôle</th>
-              <th>Date d'inscription</th>
-              <th>Dernière mise à jour</th>
+              <th>Inscription</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of filteredRows">
+            <tr *ngFor="let row of sellers">
               <td>{{ row.user.name || '-' }}</td>
-              <td>{{ row.user.email || '-' }}</td>
-              <td>
-                <select
-                  class="role-select"
-                  [(ngModel)]="row.roleDraft"
-                  [disabled]="isCurrentUser(row)"
-                >
-                  <option value="admin">Admin</option>
-                  <option value="boutique">Boutique</option>
-                  <option value="acheteur">Acheteur</option>
-                </select>
-              </td>
-              <td>{{ row.createdAt ? (row.createdAt | date: 'dd/MM/yyyy HH:mm') : 'Indisponible' }}</td>
-              <td>{{ row.user.updatedAt ? (row.user.updatedAt | date: 'dd/MM/yyyy HH:mm') : '-' }}</td>
+              <td>{{ row.user.email }}</td>
+              <td>{{ row.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
               <td>
                 <div class="actions">
                   <button
                     type="button"
-                    class="btn-save"
-                    (click)="saveRole(row)"
-                    [disabled]="isCurrentUser(row) || row.user.role === row.roleDraft || savingIds.has(row.id)"
+                    class="btn-history"
+                    (click)="viewHistory(row)"
+                    [disabled]="loadingHistory && selectedSellerId === row.id"
                   >
-                    Enregistrer
+                    Historique publications
                   </button>
 
                   <button
                     type="button"
-                    class="btn-delete"
-                    (click)="deleteUser(row)"
-                    [disabled]="isCurrentUser(row) || savingIds.has(row.id)"
+                    class="btn-ban"
+                    (click)="banSeller(row)"
+                    [disabled]="savingIds.has(row.id)"
                   >
-                    Supprimer
+                    Ban
                   </button>
                 </div>
               </td>
             </tr>
 
-            <tr *ngIf="filteredRows.length === 0">
-              <td colspan="6" class="empty">Aucun utilisateur trouvé.</td>
+            <tr *ngIf="sellers.length === 0">
+              <td colspan="4" class="empty">Aucun vendeur actif.</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <section class="panel history" *ngIf="selectedSeller">
+        <div class="history-head">
+          <h2>Historique de publication: {{ selectedSeller.name || selectedSeller.email }}</h2>
+          <button type="button" class="btn-close" (click)="closeHistory()">Fermer</button>
+        </div>
+
+        <div *ngIf="loadingHistory" class="history-loading">Chargement des publications...</div>
+
+        <div class="table-wrap" *ngIf="!loadingHistory">
+          <table>
+            <thead>
+              <tr>
+                <th>Produit</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Date publication</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let product of selectedSellerProducts">
+                <td>{{ product.name }}</td>
+                <td>{{ product.category || '-' }}</td>
+                <td>{{ product.price | number: '1.0-0' }} MGA</td>
+                <td>{{ product.stock }}</td>
+                <td>{{ resolveProductDate(product) | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ product.isActive === false ? 'Inactif' : 'Actif' }}</td>
+              </tr>
+
+              <tr *ngIf="selectedSellerProducts.length === 0">
+                <td colspan="6" class="empty">Aucune publication trouvée.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel history" *ngIf="bannedSellers.length > 0">
+        <div class="history-head">
+          <h2>Vendeurs bannis</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of bannedSellers">
+                <td>{{ row.user.name || '-' }}</td>
+                <td>{{ row.user.email }}</td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn-history"
+                    (click)="unbanSeller(row)"
+                    [disabled]="savingIds.has(row.id)"
+                  >
+                    Débannir
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   `,
   styles: [
     `
-      .users-page {
+      .sellers-page {
         max-width: 1240px;
         margin: 1.4rem auto;
         padding: 0 1rem;
@@ -165,7 +196,7 @@ type UserRow = {
       .stats-grid {
         margin-top: 0.9rem;
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.7rem;
       }
       .stat-card {
@@ -186,20 +217,6 @@ type UserRow = {
         font-size: 1.3rem;
         font-weight: 800;
       }
-      .toolbar {
-        margin: 0.9rem 0;
-        display: grid;
-        grid-template-columns: 1fr 220px;
-        gap: 0.7rem;
-      }
-      .search-input,
-      .role-filter,
-      .role-select {
-        border: 1px solid #c9dced;
-        border-radius: 10px;
-        padding: 0.55rem 0.65rem;
-        font: inherit;
-      }
       .panel {
         margin-top: 0.9rem;
         border: 1px solid #d5e4f1;
@@ -213,6 +230,7 @@ type UserRow = {
         color: #932d2d;
       }
       .table-wrap {
+        margin-top: 0.9rem;
         border: 1px solid #d5e4f1;
         border-radius: 14px;
         background: #fff;
@@ -222,7 +240,7 @@ type UserRow = {
       table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 920px;
+        min-width: 760px;
       }
       th,
       td {
@@ -244,36 +262,52 @@ type UserRow = {
         display: inline-flex;
         gap: 0.45rem;
       }
-      .btn-save,
-      .btn-delete {
+      .btn-history,
+      .btn-ban,
+      .btn-close {
         border-radius: 8px;
         border: 0;
-        padding: 0.45rem 0.6rem;
+        padding: 0.45rem 0.62rem;
         cursor: pointer;
         font-weight: 700;
       }
-      .btn-save {
+      .btn-history {
         background: #e8f5ff;
         color: #0d4f84;
       }
-      .btn-delete {
+      .btn-ban {
         background: #fdecec;
         color: #992f2f;
+      }
+      .history {
+        margin-top: 1rem;
+      }
+      .history-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      .history-head h2 {
+        margin: 0;
+        color: #10243a;
+        font-size: 1.05rem;
+      }
+      .btn-close {
+        background: #eef4fb;
+        color: #294b6d;
+      }
+      .history-loading {
+        margin-top: 0.6rem;
+        color: #5d768f;
+        font-weight: 600;
       }
       .empty {
         text-align: center;
         color: #5d768f;
         padding: 1rem;
       }
-      @media (max-width: 980px) {
-        .stats-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .toolbar {
-          grid-template-columns: 1fr;
-        }
-      }
-      @media (max-width: 580px) {
+      @media (max-width: 760px) {
         .stats-grid {
           grid-template-columns: 1fr;
         }
@@ -282,26 +316,37 @@ type UserRow = {
   ],
 })
 export class AdminUsersComponent implements OnInit, OnDestroy {
-  rows: UserRow[] = [];
-  filteredRows: UserRow[] = [];
+  sellers: SellerRow[] = [];
+  bannedSellers: SellerRow[] = [];
   loading = true;
   error = '';
-  searchQuery = '';
-  roleFilter: '' | Role = '';
+
+  selectedSeller: User | null = null;
+  selectedSellerId = '';
+  selectedSellerProducts: Product[] = [];
+  loadingHistory = false;
+
   savingIds = new Set<string>();
 
-  private currentUserId = '';
   private destroy$ = new Subject<void>();
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private productService: ProductService,
+    private sellerModerationService: SellerModerationService,
+  ) {}
 
   ngOnInit(): void {
-    this.currentUserId = getEntityId(this.authService.currentUserValue);
-    this.loadUsers();
+    this.loadSellers(true);
 
-    merge(this.authService.usersRefresh$, timer(15000, 15000))
+    merge(
+      this.authService.usersRefresh$,
+      this.productService.refresh$,
+      this.sellerModerationService.refresh$,
+      timer(15000, 15000),
+    )
       .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.loadUsers(false));
+      .subscribe(() => this.loadSellers(false));
   }
 
   ngOnDestroy(): void {
@@ -309,111 +354,127 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadUsers(showLoader = true): void {
+  loadSellers(showLoader = true): void {
     if (showLoader) this.loading = true;
     this.error = '';
 
     this.authService.getAllUsers().subscribe({
-      next: (users) => {
-        this.rows = users
-          .map((user) => {
-            const id = getEntityId(user);
-            return {
-              user,
-              id,
-              createdAt: this.resolveCreatedAt(user),
-              roleDraft: user.role,
-            } as UserRow;
-          })
-          .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+      next: (usersResponse: unknown) => {
+        const users = this.normalizeUsersResponse(usersResponse);
+        const bannedIds = new Set(this.sellerModerationService.getBannedSellerIds());
 
-        this.applyFilters();
+        const sellerRows = users
+          .filter((u) => u.role === 'boutique')
+          .map((user) => ({
+            user,
+            id: getEntityId(user),
+            createdAt: this.resolveUserDate(user),
+          }))
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+        this.sellers = sellerRows.filter((row) => !bannedIds.has(row.id));
+        this.bannedSellers = sellerRows.filter((row) => bannedIds.has(row.id));
+
         this.loading = false;
       },
       error: (err) => {
-        this.error = err?.error?.message || 'Impossible de charger les utilisateurs.';
+        this.error = err?.error?.message || 'Impossible de charger les vendeurs.';
         this.loading = false;
       },
     });
   }
 
-  applyFilters(): void {
-    const search = this.normalize(this.searchQuery);
-
-    this.filteredRows = this.rows.filter((row) => {
-      const byRole = !this.roleFilter || row.user.role === this.roleFilter;
-      if (!byRole) return false;
-
-      if (!search) return true;
-
-      const haystack = this.normalize(`${row.user.name || ''} ${row.user.email || ''} ${row.user.role}`);
-      return haystack.includes(search);
-    });
-  }
-
-  saveRole(row: UserRow): void {
-    if (!row.id || row.user.role === row.roleDraft || this.isCurrentUser(row)) return;
+  banSeller(row: SellerRow): void {
+    if (!row.id) return;
+    if (!confirm(`Bannir le vendeur ${row.user.email} ?`)) return;
 
     this.savingIds.add(row.id);
-    this.authService.updateUser(row.id, { role: row.roleDraft }).subscribe({
-      next: (updated) => {
-        row.user = updated;
-        row.roleDraft = updated.role;
-        this.savingIds.delete(row.id);
-        this.loadUsers(false);
-      },
-      error: (err) => {
-        this.savingIds.delete(row.id);
-        this.error = err?.error?.message || 'Échec de la mise à jour du rôle.';
-      },
-    });
-  }
-
-  deleteUser(row: UserRow): void {
-    if (!row.id || this.isCurrentUser(row)) return;
-    if (!confirm(`Supprimer l'utilisateur ${row.user.email} ?`)) return;
-
-    this.savingIds.add(row.id);
-    this.authService.deleteUser(row.id).subscribe({
+    this.authService.updateUser(row.id, { role: 'acheteur' }).subscribe({
       next: () => {
+        this.sellerModerationService.banSeller(row.id);
         this.savingIds.delete(row.id);
-        this.loadUsers(false);
+
+        if (this.selectedSellerId === row.id) {
+          this.closeHistory();
+        }
+
+        this.loadSellers(false);
       },
       error: (err) => {
+        // Fallback local ban to keep moderation functional even if backend role update fails.
+        this.sellerModerationService.banSeller(row.id);
         this.savingIds.delete(row.id);
-        this.error = err?.error?.message || 'Échec de suppression utilisateur.';
+        this.error = err?.error?.message || 'Vendeur banni localement (mise à jour backend indisponible).';
+        this.loadSellers(false);
       },
     });
   }
 
-  isCurrentUser(row: UserRow): boolean {
-    return !!row.id && row.id === this.currentUserId;
+  unbanSeller(row: SellerRow): void {
+    if (!row.id) return;
+    this.sellerModerationService.unbanSeller(row.id);
+    this.loadSellers(false);
   }
 
-  countByRole(role: Role): number {
-    return this.rows.filter((row) => row.user.role === role).length;
+  viewHistory(row: SellerRow): void {
+    if (!row.id) return;
+
+    this.selectedSeller = row.user;
+    this.selectedSellerId = row.id;
+    this.selectedSellerProducts = [];
+    this.loadingHistory = true;
+
+    this.productService.getProductsByShop(row.id).subscribe({
+      next: (products) => {
+        this.selectedSellerProducts = [...products].sort(
+          (a, b) => this.resolveProductDate(b).getTime() - this.resolveProductDate(a).getTime(),
+        );
+        this.loadingHistory = false;
+      },
+      error: (err) => {
+        this.loadingHistory = false;
+        this.error = err?.error?.message || 'Impossible de charger l’historique de publication.';
+      },
+    });
   }
 
-  private resolveCreatedAt(user: User): Date | null {
-    if (user.createdAt) {
-      const fromField = new Date(user.createdAt);
-      if (!Number.isNaN(fromField.getTime())) return fromField;
+  closeHistory(): void {
+    this.selectedSeller = null;
+    this.selectedSellerId = '';
+    this.selectedSellerProducts = [];
+    this.loadingHistory = false;
+  }
+
+  resolveProductDate(product: Product): Date {
+    if (product.createdAt) {
+      const direct = new Date(product.createdAt);
+      if (!Number.isNaN(direct.getTime())) return direct;
     }
 
-    const id = getEntityId(user);
-    if (!id || id.length < 8) return null;
-
-    const tsHex = id.substring(0, 8);
-    const ts = Number.parseInt(tsHex, 16);
-    if (Number.isNaN(ts)) return null;
+    const id = getEntityId(product);
+    if (!id || id.length < 8) return new Date(0);
+    const ts = Number.parseInt(id.slice(0, 8), 16);
+    if (Number.isNaN(ts)) return new Date(0);
     return new Date(ts * 1000);
   }
 
-  private normalize(value: string): string {
-    return (value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
+  private resolveUserDate(user: User): Date {
+    if (user.createdAt) {
+      const direct = new Date(user.createdAt);
+      if (!Number.isNaN(direct.getTime())) return direct;
+    }
+
+    const id = getEntityId(user);
+    if (!id || id.length < 8) return new Date(0);
+    const ts = Number.parseInt(id.slice(0, 8), 16);
+    if (Number.isNaN(ts)) return new Date(0);
+    return new Date(ts * 1000);
+  }
+
+  private normalizeUsersResponse(value: unknown): User[] {
+    if (Array.isArray(value)) return value as User[];
+    const maybeObject = value as { users?: User[] };
+    if (Array.isArray(maybeObject?.users)) return maybeObject.users;
+    return [];
   }
 }
