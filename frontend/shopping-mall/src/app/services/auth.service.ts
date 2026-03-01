@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { User, AuthResponse, LoginRequest, SignupRequest } from '../models/user.model';
 import { API_BASE_URL } from '../config/api.config';
@@ -10,6 +10,8 @@ import { API_BASE_URL } from '../config/api.config';
 })
 export class AuthService {
   private apiUrl = `${API_BASE_URL}/users`;
+  private usersRefreshSubject = new Subject<void>();
+  public usersRefresh$ = this.usersRefreshSubject.asObservable();
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
   private tokenSubject: BehaviorSubject<string | null>;
@@ -81,6 +83,22 @@ export class AuthService {
 
   getProfile(): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/profile`);
+  }
+
+  getAllUsers(): Observable<User[]> {
+    return this.http.get<User[]>(this.apiUrl);
+  }
+
+  updateUser(id: string, payload: Partial<Pick<User, 'name' | 'email' | 'role'>>): Observable<User> {
+    return this.http
+      .put<User>(`${this.apiUrl}/${id}`, payload)
+      .pipe(tap(() => this.usersRefreshSubject.next()));
+  }
+
+  deleteUser(id: string): Observable<{ message: string }> {
+    return this.http
+      .delete<{ message: string }>(`${this.apiUrl}/${id}`)
+      .pipe(tap(() => this.usersRefreshSubject.next()));
   }
 
   isAuthenticated(): boolean {
