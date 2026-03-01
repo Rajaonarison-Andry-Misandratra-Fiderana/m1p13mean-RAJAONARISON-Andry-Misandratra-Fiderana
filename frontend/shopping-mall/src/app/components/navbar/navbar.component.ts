@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../models/user.model';
-import { USERS as SEED_USERS } from '../../mock/seed';
 
 @Component({
   selector: 'app-navbar',
@@ -15,8 +14,6 @@ import { USERS as SEED_USERS } from '../../mock/seed';
 export class NavbarComponent implements OnInit {
   currentUser: User | null = null;
   isMenuOpen = false;
-  showQuickLogin = false;
-  seedUsers: User[] = SEED_USERS;
 
   constructor(
     private authService: AuthService,
@@ -41,14 +38,6 @@ export class NavbarComponent implements OnInit {
     this.authService.logout();
     this.router.navigate(['/']);
     this.isMenuOpen = false;
-  }
-
-  quickLogin(user: User): void {
-    // simple demo login: store token + user then reload to re-evaluate app state
-    localStorage.setItem('token', 'demo-token-' + user.id);
-    localStorage.setItem('user', JSON.stringify(user));
-    // notify via auth service subjects if possible by reloading
-    window.location.reload();
   }
 
   isAdmin(): boolean {

@@ -55,6 +55,11 @@ export class SignupComponent implements OnInit {
 
     this.loading = true;
     const { confirmPassword, ...signupData } = this.signupForm.value;
+    signupData.email = String(signupData.email || '')
+      .trim()
+      .toLowerCase();
+    signupData.name = String(signupData.name || '').trim();
+    signupData.password = String(signupData.password || '').trim();
 
     this.authService.signup(signupData).subscribe({
       next: (response) => {

@@ -2,9 +2,6 @@
   <div class="products-header">
     <h1>Products Catalog</h1>
     <p>Browse our collection of products from various boutiques</p>
-    <div class="header-actions">
-      <a *ngIf="isSeller" routerLink="/boutique/products" class="btn-sell">Vendre</a>
-    </div>
   </div>
 
   <div class="products-content">
@@ -68,7 +65,7 @@
             </p>
             <div class="product-footer">
               <span class="price">${{ product.price }}</span>
-              <a [routerLink]="['/products', product.id]" class="btn-view">View Details</a>
+              <a [routerLink]="['/products', getProductId(product)]" class="btn-view">View Details</a>
             </div>
           </div>
         </div>

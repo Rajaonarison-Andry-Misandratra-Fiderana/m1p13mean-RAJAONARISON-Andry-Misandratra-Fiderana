@@ -13,7 +13,7 @@
     </button>
 
     <div class="navbar-menu" [class.active]="isMenuOpen">
-      <!-- Section navbar-start vide car Maison et Produit ont été supprimés -->
+      <!-- Section navbar-start vide -->
       <div class="navbar-start"></div>
 
       <div class="navbar-center">
@@ -28,15 +28,6 @@
           <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup">
             S'inscrire
           </a>
-
-          <div class="quick-login">
-            <button class="nav-link" (click)="showQuickLogin = !showQuickLogin">Démo rapide</button>
-            <div class="quick-menu" *ngIf="showQuickLogin">
-              <button class="dropdown-item" *ngFor="let u of seedUsers" (click)="quickLogin(u)">
-                {{ u.name }} — {{ u.role }}
-              </button>
-            </div>
-          </div>
         </ng-container>
 
         <ng-container *ngIf="currentUser">

@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { forkJoin } from 'rxjs';
 import { ProductService } from '../../services/product.service';
 import { OrderService } from '../../services/order.service';
 import { AuthService } from '../../services/auth.service';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-boutique-dashboard',
@@ -41,7 +43,7 @@ export class BoutiqueDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     const user = this.authService.currentUserValue;
-    const shopId = user?.id;
+    const shopId = getEntityId(user);
     if (!shopId) {
       this.error = 'Shop information not available.';
       this.loading = false;
@@ -50,24 +52,23 @@ export class BoutiqueDashboardComponent implements OnInit {
 
     this.loading = true;
 
-    this.productService.getProductsByShop(shopId).subscribe({
-      next: (products) => {
+    forkJoin({
+      products: this.productService.getProductsByShop(shopId),
+      orders: this.orderService.getShopOrders(),
+    }).subscribe({
+      next: ({ products, orders }) => {
         this.productsCount = products.length;
+        this.ordersCount = orders.length;
+        this.totalSales = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Failed to load products.';
         this.loading = false;
-      },
-    });
-
-    this.orderService.getShopOrders().subscribe({
-      next: (orders) => {
-        this.ordersCount = orders.length;
-        this.totalSales = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
-      },
-      error: () => {
-        /* ignore for now */
+        if (err?.status === 401) {
+          this.error = 'Session expirée. Veuillez vous reconnecter.';
+          return;
+        }
+        this.error = 'Impossible de charger les données boutique.';
       },
     });
   }

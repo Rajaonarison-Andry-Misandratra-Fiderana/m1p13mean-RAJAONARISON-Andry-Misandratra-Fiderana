@@ -1,5 +1,6 @@
 export interface Order {
   id?: string;
+  _id?: string;
   orderNumber: string;
   buyer: string | Buyer;
   items: OrderItem[];
@@ -22,6 +23,7 @@ export interface OrderItem {
 
 export interface OrderProduct {
   id?: string;
+  _id?: string;
   name: string;
   price: number;
   image?: string;
@@ -29,12 +31,14 @@ export interface OrderProduct {
 
 export interface OrderShop {
   id?: string;
+  _id?: string;
   name: string;
   email: string;
 }
 
 export interface Buyer {
   id?: string;
+  _id?: string;
   name: string;
   email: string;
 }
@@ -51,6 +55,8 @@ export interface CreateOrderRequest {
   items: {
     product: string;
     quantity: number;
+    price?: number;
+    shop?: string;
   }[];
   shippingAddress: ShippingAddress;
   paymentMethod: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer';

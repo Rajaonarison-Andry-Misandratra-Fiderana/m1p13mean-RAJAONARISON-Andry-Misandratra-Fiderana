@@ -3,21 +3,36 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { User, AuthResponse, LoginRequest, SignupRequest } from '../models/user.model';
+import { API_BASE_URL } from '../config/api.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:5000/api/users';
+  private apiUrl = `${API_BASE_URL}/users`;
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
   private tokenSubject: BehaviorSubject<string | null>;
   public token$: Observable<string | null>;
 
   constructor(private http: HttpClient) {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
-    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser ? JSON.parse(storedUser) : null);
+    const storedUserRaw = localStorage.getItem('user');
+    const storedTokenRaw = localStorage.getItem('token');
+    const storedToken = this.isLikelyJwt(storedTokenRaw) ? storedTokenRaw : null;
+    let storedUser: User | null = null;
+    try {
+      storedUser = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+    } catch {
+      storedUser = null;
+    }
+
+    if (!storedToken) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      storedUser = null;
+    }
+
+    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser);
     this.currentUser$ = this.currentUserSubject.asObservable();
     this.tokenSubject = new BehaviorSubject<string | null>(storedToken);
     this.token$ = this.tokenSubject.asObservable();
@@ -29,6 +44,10 @@ export class AuthService {
 
   public get tokenValue(): string | null {
     return this.tokenSubject.value;
+  }
+
+  public get apiBaseUrl(): string {
+    return API_BASE_URL;
   }
 
   signup(request: SignupRequest): Observable<AuthResponse> {
@@ -71,5 +90,10 @@ export class AuthService {
   hasRole(roles: string[]): boolean {
     const currentUser = this.currentUserValue;
     return currentUser ? roles.includes(currentUser.role) : false;
+  }
+
+  private isLikelyJwt(token: string | null): token is string {
+    if (!token) return false;
+    return token.split('.').length === 3;
   }
 }

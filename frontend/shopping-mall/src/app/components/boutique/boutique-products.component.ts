@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
 import { Product } from '../../models/product.model';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-boutique-products',
@@ -11,46 +12,9 @@ import { Product } from '../../models/product.model';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="container">
-      <h1>My Products</h1>
-
-      <div *ngIf="isSeller" class="add-form">
-        <h3>Add Product</h3>
-        <form (submit)="create($event)">
-          <input
-            type="text"
-            placeholder="Name"
-            [(ngModel)]="newProduct.name"
-            name="name"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Price"
-            [(ngModel)]="newProduct.price"
-            name="price"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Stock"
-            [(ngModel)]="newProduct.stock"
-            name="stock"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Category"
-            [(ngModel)]="newProduct.category"
-            name="category"
-          />
-          <input type="text" placeholder="Image URL" [(ngModel)]="newProduct.image" name="image" />
-          <textarea
-            placeholder="Description"
-            [(ngModel)]="newProduct.description"
-            name="description"
-          ></textarea>
-          <button type="submit">Create</button>
-        </form>
+      <div class="header-row">
+        <h1>Mes produits</h1>
+        <button *ngIf="isSeller" class="btn-vendre" (click)="openCreateModal()">Vendre</button>
       </div>
 
       <div *ngIf="loading">Loading products...</div>
@@ -66,11 +30,58 @@ import { Product } from '../../models/product.model';
             <div class="price">\${{ p.price }} • Stock: {{ p.stock }}</div>
           </div>
           <div class="actions">
-            <button (click)="edit(p.id)">Edit</button>
-            <button (click)="delete(p.id)">Delete</button>
+            <button (click)="edit(getProductId(p))">Edit</button>
+            <button (click)="delete(getProductId(p))">Delete</button>
           </div>
         </li>
       </ul>
+
+      <!-- Create product modal -->
+      <div class="modal-overlay" *ngIf="showCreateModal">
+        <div class="modal">
+          <h2>Vendre un produit</h2>
+          <form (submit)="createProduct($event)">
+            <div class="field">
+              <label>Nom</label>
+              <input type="text" [(ngModel)]="newProduct.name" name="name" required />
+            </div>
+
+            <div class="field">
+              <label>Description</label>
+              <textarea [(ngModel)]="newProduct.description" name="description"></textarea>
+            </div>
+
+            <div class="split-row">
+              <div class="field">
+                <label>Prix</label>
+                <input type="number" [(ngModel)]="newProduct.price" name="price" required />
+              </div>
+              <div class="field">
+                <label>Stock</label>
+                <input type="number" [(ngModel)]="newProduct.stock" name="stock" required />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Catégorie</label>
+              <input type="text" [(ngModel)]="newProduct.category" name="category" />
+            </div>
+
+            <div class="field">
+              <label>Image</label>
+              <input type="file" (change)="onFileSelected($event)" accept="image/*" />
+              <div *ngIf="previewImage" class="preview">
+                <img [src]="previewImage" alt="preview" />
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="submit" class="btn-primary">Vendre</button>
+              <button type="button" class="btn-ghost" (click)="closeCreateModal()">Annuler</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   `,
   styles: [
@@ -118,13 +129,18 @@ export class BoutiqueProductsComponent implements OnInit {
     image: '',
   };
 
+  showCreateModal = false;
+  selectedFile: File | null = null;
+  previewImage: string | null = null;
+
   constructor(
     private productService: ProductService,
     private authService: AuthService,
   ) {}
 
   ngOnInit(): void {
-    const shopId = this.authService.currentUserValue?.id;
+    const shopId = getEntityId(this.authService.currentUserValue);
+
     if (!shopId) {
       this.error = 'Shop not available.';
       this.loading = false;
@@ -136,6 +152,10 @@ export class BoutiqueProductsComponent implements OnInit {
     this.loadProducts(shopId);
   }
 
+  getProductId(product: Product): string {
+    return getEntityId(product);
+  }
+
   loadProducts(shopId: string): void {
     this.loading = true;
     this.productService.getProductsByShop(shopId).subscribe({
@@ -143,73 +163,86 @@ export class BoutiqueProductsComponent implements OnInit {
         this.products = prods;
         this.loading = false;
       },
-      error: () => {
-        this.error = 'Failed to load products.';
+      error: (err) => {
+        this.error = 'Failed to load products.' + (err?.status ? ` (status ${err.status})` : '');
         this.loading = false;
       },
     });
   }
 
-  create(e: Event): void {
+  openCreateModal(): void {
+    this.showCreateModal = true;
+  }
+
+  closeCreateModal(): void {
+    this.showCreateModal = false;
+    this.selectedFile = null;
+    this.previewImage = null;
+    this.newProduct = { name: '', price: 0, stock: 0, description: '', category: '', image: '' };
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    this.selectedFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.previewImage = e.target?.result as string;
+    };
+    reader.readAsDataURL(this.selectedFile);
+  }
+
+  createProduct(e: Event): void {
     e.preventDefault();
     if (!this.isSeller) {
       alert('Only sellers can create products.');
       return;
     }
 
-    const shopId = this.authService.currentUserValue?.id;
-    const payload = {
-      name: this.newProduct.name || 'New product',
-      price: this.newProduct.price || 0,
-      stock: this.newProduct.stock || 0,
-      description: this.newProduct.description,
-      image: this.newProduct.image,
-      category: this.newProduct.category,
-    };
+    const shopId = getEntityId(this.authService.currentUserValue);
+    if (!shopId) {
+      alert("Votre compte vendeur n'est pas identifié. Veuillez vous reconnecter.");
+      return;
+    }
 
-    this.productService.createProduct(payload as any).subscribe({
+    // If a file was selected, send multipart FormData (image upload)
+    let requestPayload: any;
+    if (this.selectedFile) {
+      const fd = new FormData();
+      fd.append('name', this.newProduct.name || 'New product');
+      fd.append('price', String(this.newProduct.price || 0));
+      fd.append('stock', String(this.newProduct.stock || 0));
+      if (this.newProduct.description) fd.append('description', this.newProduct.description);
+      if (this.newProduct.category) fd.append('category', this.newProduct.category);
+      fd.append('shop', shopId);
+      fd.append('image', this.selectedFile, this.selectedFile.name);
+      requestPayload = fd;
+    } else {
+      // No file: send JSON body (server may still accept this)
+      requestPayload = {
+        name: this.newProduct.name || 'New product',
+        price: this.newProduct.price || 0,
+        stock: this.newProduct.stock || 0,
+        description: this.newProduct.description,
+        category: this.newProduct.category,
+        // If there's a preview (base64), include it as 'image' — only if server supports it
+        image: this.previewImage || undefined,
+      };
+    }
+
+    // Send to backend and rely on server for persistence. On error, show helpful message.
+    this.productService.createProduct(requestPayload).subscribe({
       next: (prod) => {
-        prod.shop = prod.shop || {
-          id: shopId,
-          name: this.authService.currentUserValue?.name || '',
-          email: this.authService.currentUserValue?.email || '',
-        };
-        this.products.unshift(prod);
-        this.newProduct = {
-          name: '',
-          price: 0,
-          stock: 0,
-          description: '',
-          category: '',
-          image: '',
-        };
+        this.closeCreateModal();
+        this.loadProducts(shopId);
       },
-      error: () => {
-        const localId = 'p-local-' + Date.now();
-        const localProd: Product = {
-          id: localId,
-          name: payload.name,
-          price: payload.price,
-          stock: payload.stock,
-          description: payload.description,
-          image: payload.image,
-          category: payload.category,
-          shop: {
-            id: shopId,
-            name: this.authService.currentUserValue?.name || '',
-            email: this.authService.currentUserValue?.email || '',
-          },
-        };
-        this.products.unshift(localProd);
-        this.newProduct = {
-          name: '',
-          price: 0,
-          stock: 0,
-          description: '',
-          category: '',
-          image: '',
-        };
-        alert('Product created locally (backend unavailable).');
+      error: (err) => {
+        let msg = 'Impossible de créer le produit sur le serveur.';
+        if (err?.status === 401) msg += ' Erreur 401 — non autorisé. Vérifiez la connexion.';
+        if (err?.status === 400) msg += ' Erreur 400 — requête invalide. Vérifiez les champs.';
+        if (err?.status === 500)
+          msg += ' Erreur 500 — erreur côté serveur. Consultez les logs backend.';
+        alert(msg + ' Voir la console pour plus de détails.');
       },
     });
   }
@@ -223,7 +256,7 @@ export class BoutiqueProductsComponent implements OnInit {
     if (!confirm('Delete this product?')) return;
     this.productService.deleteProduct(id).subscribe({
       next: () => {
-        this.products = this.products.filter((p) => p.id !== id);
+        this.products = this.products.filter((p) => getEntityId(p) !== id);
       },
       error: () => alert('Failed to delete product.'),
     });

@@ -1,5 +1,6 @@
 export interface Product {
   id?: string;
+  _id?: string;
   name: string;
   price: number;
   stock: number;
@@ -16,12 +17,14 @@ export interface Product {
 
 export interface Shop {
   id?: string;
+  _id?: string;
   name: string;
   email: string;
 }
 
 export interface Review {
   id?: string;
+  _id?: string;
   user: string | User;
   comment: string;
   rating: number;
@@ -30,6 +33,7 @@ export interface Review {
 
 export interface User {
   id?: string;
+  _id?: string;
   name: string;
   email: string;
 }

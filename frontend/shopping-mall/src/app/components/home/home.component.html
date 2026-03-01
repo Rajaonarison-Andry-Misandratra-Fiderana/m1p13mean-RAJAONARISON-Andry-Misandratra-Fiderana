@@ -32,7 +32,7 @@
             <p class="description">{{ product.description?.substring(0, 50) }}...</p>
             <div class="product-footer">
               <span class="price">${{ product.price }}</span>
-              <a [routerLink]="['/products', product.id]" class="btn-view">View</a>
+              <a [routerLink]="['/products', getProductId(product)]" class="btn-view">View</a>
             </div>
           </div>
         </div>

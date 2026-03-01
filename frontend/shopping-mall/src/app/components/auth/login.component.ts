@@ -16,6 +16,7 @@ export class LoginComponent implements OnInit {
   loading = false;
   submitted = false;
   error = '';
+  apiBaseUrl = '';
 
   constructor(
     private formBuilder: FormBuilder,
@@ -24,6 +25,7 @@ export class LoginComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.apiBaseUrl = this.authService.apiBaseUrl;
     this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
@@ -40,13 +42,28 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    const email = String(this.loginForm.value.email || '')
+      .trim()
+      .toLowerCase();
+    const password = String(this.loginForm.value.password || '').trim();
+    if (!email || !password) {
+      this.error = 'Email et mot de passe requis.';
+      return;
+    }
+
     this.loading = true;
-    this.authService.login(this.loginForm.value).subscribe({
+    this.authService.login({ email, password }).subscribe({
       next: (response) => {
         this.router.navigate(['/']);
       },
       error: (error) => {
-        this.error = error.error?.message || 'Login failed';
+        if (error?.status === 400) {
+          this.error = "Identifiants invalides (email/mot de passe) ou compte inexistant sur cette base.";
+        } else if (error?.status === 0) {
+          this.error = "API inaccessible. Vérifie que le backend est démarré et l'URL API correcte.";
+        } else {
+          this.error = error.error?.message || 'Échec de connexion';
+        }
         this.loading = false;
       }
     });

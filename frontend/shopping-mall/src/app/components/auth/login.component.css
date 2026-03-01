@@ -87,6 +87,13 @@
   border-left: 4px solid #e74c3c;
 }
 
+.alert-info {
+  background: #e9f4ff;
+  color: #1b4f72;
+  border-left: 4px solid #3498db;
+  font-size: 0.85rem;
+}
+
 .btn-login {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;

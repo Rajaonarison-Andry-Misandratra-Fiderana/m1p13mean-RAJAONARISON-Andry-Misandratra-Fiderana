@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-home',
@@ -34,5 +35,9 @@ export class HomeComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  getProductId(product: Product): string {
+    return getEntityId(product);
   }
 }

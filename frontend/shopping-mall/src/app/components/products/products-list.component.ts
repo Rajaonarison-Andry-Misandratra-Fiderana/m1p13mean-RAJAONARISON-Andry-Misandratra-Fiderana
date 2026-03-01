@@ -4,8 +4,7 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../services/product.service';
 import { Product } from '../../models/product.model';
-import { PRODUCTS as FALLBACK_PRODUCTS } from '../../mock/seed';
-import { AuthService } from '../../services/auth.service';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-products-list',
@@ -25,17 +24,10 @@ export class ProductsListComponent implements OnInit {
   maxPrice = 10000;
 
   categories = ['Fashion', 'Electronics', 'Home & Garden', 'Books', 'Sports', 'Beauty'];
-
-  isSeller = false;
-
-  constructor(
-    private productService: ProductService,
-    private authService: AuthService,
-  ) {}
+  constructor(private productService: ProductService) {}
 
   ngOnInit(): void {
     this.loadProducts();
-    this.isSeller = this.authService.hasRole(['boutique']);
   }
 
   loadProducts(): void {
@@ -47,13 +39,16 @@ export class ProductsListComponent implements OnInit {
         this.loading = false;
       },
       error: (error) => {
-        this.error = 'Failed to load products from API — using local fallback.';
-        // fallback to seeded products so the UI remains usable during dev
-        this.products = FALLBACK_PRODUCTS;
+        this.error = error?.error?.message || 'Failed to load products from API.';
+        this.products = [];
         this.applyFilters();
         this.loading = false;
       },
     });
+  }
+
+  getProductId(product: Product): string {
+    return getEntityId(product);
   }
 
   applyFilters(): void {

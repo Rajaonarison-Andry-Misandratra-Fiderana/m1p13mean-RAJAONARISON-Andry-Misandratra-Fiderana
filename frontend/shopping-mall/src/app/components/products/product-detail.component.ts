@@ -5,6 +5,7 @@ import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
 import { OrderService } from '../../services/order.service';
 import { Product } from '../../models/product.model';
+import { getEntityId } from '../../utils/id.util';
 
 @Component({
   selector: 'app-product-detail',
@@ -95,8 +96,16 @@ export class ProductDetailComponent implements OnInit {
       return;
     }
 
+    const productId = getEntityId(this.product);
+    const shopId =
+      typeof this.product.shop === 'string' ? this.product.shop : getEntityId(this.product.shop);
+    if (!productId || !shopId) {
+      alert('Impossible de créer la commande: identifiants produit/boutique invalides.');
+      return;
+    }
+
     const orderReq = {
-      items: [{ product: this.product.id || '', quantity: 1 }],
+      items: [{ product: productId, quantity: 1, price: this.product.price, shop: shopId }],
       shippingAddress: {
         street: 'Unknown',
         city: 'Unknown',
@@ -107,7 +116,7 @@ export class ProductDetailComponent implements OnInit {
       paymentMethod: 'credit_card' as const,
     };
 
-    this.orderService.createOrder(orderReq as any).subscribe({
+    this.orderService.createOrder(orderReq).subscribe({
       next: () => {
         alert('Order placed successfully.');
         this.router.navigate(['/buyer/orders']);
