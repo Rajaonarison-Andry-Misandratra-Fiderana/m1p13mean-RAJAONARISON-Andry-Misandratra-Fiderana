@@ -1,0 +1,81 @@
+import { Routes } from '@angular/router';
+import { HomeComponent } from './components/home/home.component';
+import { LoginComponent } from './components/auth/login.component';
+import { AuthGuard } from './guards/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: '',
+    component: HomeComponent,
+  },
+  {
+    path: 'login',
+    component: LoginComponent,
+  },
+  {
+    path: 'products',
+    loadComponent: () =>
+      import('./components/products/products-list.component').then((m) => m.ProductsListComponent),
+  },
+  {
+    path: 'products/:id',
+    loadComponent: () =>
+      import('./components/products/product-detail.component').then(
+        (m) => m.ProductDetailComponent,
+      ),
+  },
+  {
+    path: 'signup',
+    loadComponent: () =>
+      import('./components/auth/signup.component').then((m) => m.SignupComponent),
+  },
+  {
+    path: 'profile',
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import('./components/profile/profile.component').then((m) => m.ProfileComponent),
+  },
+  {
+    path: 'buyer/orders',
+    canActivate: [AuthGuard],
+    data: { roles: ['acheteur'] },
+    loadComponent: () =>
+      import('./components/orders/buyer-orders.component').then((m) => m.BuyerOrdersComponent),
+  },
+  {
+    path: 'boutique/dashboard',
+    canActivate: [AuthGuard],
+    data: { roles: ['boutique'] },
+    loadComponent: () =>
+      import('./components/boutique/boutique-dashboard.component').then(
+        (m) => m.BoutiqueDashboardComponent,
+      ),
+  },
+  {
+    path: 'boutique/products',
+    canActivate: [AuthGuard],
+    data: { roles: ['boutique'] },
+    loadComponent: () =>
+      import('./components/boutique/boutique-products.component').then(
+        (m) => m.BoutiqueProductsComponent,
+      ),
+  },
+  {
+    path: 'admin/dashboard',
+    canActivate: [AuthGuard],
+    data: { roles: ['admin'] },
+    loadComponent: () =>
+      import('./components/admin/admin-dashboard.component').then((m) => m.AdminDashboardComponent),
+  },
+  {
+    path: 'admin/users',
+    canActivate: [AuthGuard],
+    data: { roles: ['admin'] },
+    loadComponent: () =>
+      import('./components/admin/admin-users.component').then((m) => m.AdminUsersComponent),
+  },
+  {
+    path: '**',
+    redirectTo: '',
+  },
+];

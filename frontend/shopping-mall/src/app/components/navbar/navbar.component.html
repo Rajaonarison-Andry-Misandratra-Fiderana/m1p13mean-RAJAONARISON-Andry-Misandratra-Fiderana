@@ -1,0 +1,75 @@
+<nav class="navbar">
+  <div class="navbar-container">
+    <div class="navbar-brand">
+      <a routerLink="/" class="brand-link">
+        <span class="brand-icon">🛍️</span>
+        <span class="brand-text">Shopping Mall</span>
+      </a>
+    </div>
+
+    <button class="menu-toggle" (click)="toggleMenu()" [class.active]="isMenuOpen">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <div class="navbar-menu" [class.active]="isMenuOpen">
+      <div class="navbar-start">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">
+          Home
+        </a>
+        <a routerLink="/products" routerLinkActive="active" class="nav-link">
+          Products
+        </a>
+      </div>
+
+      <div class="navbar-end">
+        <ng-container *ngIf="!currentUser">
+          <a routerLink="/login" routerLinkActive="active" class="nav-link">
+            Login
+          </a>
+          <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup">
+            Sign Up
+          </a>
+        </ng-container>
+
+        <ng-container *ngIf="currentUser">
+          <div class="user-menu">
+            <span class="user-name">{{ currentUser.name }}</span>
+            <span class="user-role" [ngClass]="'role-' + currentUser.role">{{ currentUser.role }}</span>
+          </div>
+
+          <div class="nav-dropdown">
+            <button class="nav-link dropdown-toggle">
+              {{ currentUser.role === 'admin' ? '⚙️ Admin' : currentUser.role === 'boutique' ? '🏪 Shop' : '🛒 Dashboard' }}
+            </button>
+            <div class="dropdown-menu">
+              <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="dropdown-item">
+                Admin Dashboard
+              </a>
+              <a *ngIf="isAdmin()" routerLink="/admin/users" class="dropdown-item">
+                Manage Users
+              </a>
+              <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="dropdown-item">
+                Shop Dashboard
+              </a>
+              <a *ngIf="isBoutique()" routerLink="/boutique/products" class="dropdown-item">
+                My Products
+              </a>
+              <a *ngIf="isAcheteur()" routerLink="/buyer/orders" class="dropdown-item">
+                My Orders
+              </a>
+              <a routerLink="/profile" class="dropdown-item">
+                Profile
+              </a>
+              <hr class="dropdown-divider">
+              <button (click)="logout()" class="dropdown-item logout">
+                Logout
+              </button>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</nav>

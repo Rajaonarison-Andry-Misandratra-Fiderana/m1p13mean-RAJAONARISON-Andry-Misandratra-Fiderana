@@ -1,0 +1,210 @@
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+
+// CREATE ORDER
+exports.createOrder = async (req, res) => {
+  try {
+    const { items, shippingAddress, paymentMethod } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: "Order must contain items" });
+    }
+
+    // Calculate total and validate stock
+    let totalAmount = 0;
+    for (let item of items) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        return res.status(404).json({ message: `Product ${item.product} not found` });
+      }
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+      }
+      totalAmount += product.price * item.quantity;
+    }
+
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const order = new Order({
+      orderNumber,
+      buyer: req.user.id,
+      items,
+      totalAmount,
+      shippingAddress,
+      paymentMethod,
+    });
+
+    await order.save();
+    await order.populate([
+      { path: "buyer", select: "name email" },
+      { path: "items.product", select: "name price image" },
+      { path: "items.shop", select: "name email" },
+    ]);
+
+    res.status(201).json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET MY ORDERS (for buyers)
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ buyer: req.user.id })
+      .populate("items.product", "name price image")
+      .populate("items.shop", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET ORDERS FOR SHOP (for boutiques)
+exports.getShopOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ "items.shop": req.user.id })
+      .populate("buyer", "name email")
+      .populate("items.product", "name price image")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET ALL ORDERS (admin only)
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("buyer", "name email")
+      .populate("items.product", "name price image")
+      .populate("items.shop", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// GET ORDER BY ID
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("buyer", "name email")
+      .populate("items.product", "name price image")
+      .populate("items.shop", "name email");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check authorization (buyer, shop owner, or admin)
+    const isBuyer = order.buyer._id.toString() === req.user.id;
+    const isShopOwner = order.items.some(item => item.shop._id.toString() === req.user.id);
+    const isAdmin = req.user.role === "admin";
+
+    if (!isBuyer && !isShopOwner && !isAdmin) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// UPDATE ORDER STATUS
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["pending", "confirmed", "shipped", "delivered", "cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check authorization
+    const isShopOwner = order.items.some(item => item.shop.toString() === req.user.id);
+    const isAdmin = req.user.role === "admin";
+
+    if (!isShopOwner && !isAdmin) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    order.status = status;
+    await order.save();
+
+    await order.populate([
+      { path: "buyer", select: "name email" },
+      { path: "items.product", select: "name price image" },
+      { path: "items.shop", select: "name email" },
+    ]);
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// UPDATE PAYMENT STATUS
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+
+    if (!["pending", "completed", "failed"].includes(paymentStatus)) {
+      return res.status(400).json({ message: "Invalid payment status" });
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Check authorization (only admin or buyer)
+    const isBuyer = order.buyer.toString() === req.user.id;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isBuyer && !isAdmin) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    order.paymentStatus = paymentStatus;
+    await order.save();
+
+    await order.populate([
+      { path: "buyer", select: "name email" },
+      { path: "items.product", select: "name price image" },
+      { path: "items.shop", select: "name email" },
+    ]);
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// DELETE ORDER (admin only)
+exports.deleteOrder = async (req, res) => {
+  try {
+    const order = await Order.findByIdAndDelete(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json({ message: "Order deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

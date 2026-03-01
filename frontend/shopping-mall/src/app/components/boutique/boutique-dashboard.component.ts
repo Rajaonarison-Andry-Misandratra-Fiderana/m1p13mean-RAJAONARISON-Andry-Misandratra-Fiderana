@@ -1,0 +1,1 @@
+import { Component } from '@angular/core'; import { CommonModule } from '@angular/common'; @Component({ selector: 'app-boutique-dashboard', standalone: true, imports: [CommonModule], template: `<div class='container'><h1>Shop Dashboard</h1></div>`, styles: ['.container { padding: 2rem; }'] }) export class BoutiqueDashboardComponent { }

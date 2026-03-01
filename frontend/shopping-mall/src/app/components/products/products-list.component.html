@@ -1,0 +1,112 @@
+<div class="products-container">
+  <div class="products-header">
+    <h1>Products Catalog</h1>
+    <p>Browse our collection of products from various boutiques</p>
+  </div>
+
+  <div class="products-content">
+    <!-- Sidebar Filters -->
+    <div class="sidebar">
+      <div class="filter-section">
+        <h3>Search</h3>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search products..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+        >
+      </div>
+
+      <div class="filter-section">
+        <h3>Category</h3>
+        <select
+          class="filter-select"
+          [(ngModel)]="selectedCategory"
+          (ngModelChange)="onCategoryChange()"
+        >
+          <option value="">All Categories</option>
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+
+      <div class="filter-section">
+        <h3>Price Range</h3>
+        <div class="price-range">
+          <div class="price-input">
+            <label>Min: ${{ minPrice }}</label>
+            <input
+              type="range"
+              min="0"
+              max="10000"
+              [(ngModel)]="minPrice"
+              (ngModelChange)="onPriceChange()"
+            >
+          </div>
+          <div class="price-input">
+            <label>Max: ${{ maxPrice }}</label>
+            <input
+              type="range"
+              min="0"
+              max="10000"
+              [(ngModel)]="maxPrice"
+              (ngModelChange)="onPriceChange()"
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid-section">
+      <div *ngIf="loading" class="loading">
+        <p>Loading products...</p>
+      </div>
+
+      <div *ngIf="error" class="alert alert-error">
+        {{ error }}
+      </div>
+
+      <div
+        *ngIf="!loading && filteredProducts.length > 0"
+        class="products-grid"
+      >
+        <div *ngFor="let product of filteredProducts" class="product-card">
+          <div class="product-image">
+            <img
+              [src]="product.image || '/assets/placeholder.png'"
+              [alt]="product.name"
+            >
+            <span *ngIf="product.stock <= 0" class="out-of-stock"
+              >Out of Stock</span
+            >
+            <span *ngIf="product.rating" class="rating">
+              ⭐ {{ product.rating.toFixed(1) }}
+            </span>
+          </div>
+          <div class="product-info">
+            <h3>{{ product.name }}</h3>
+            <p class="category" *ngIf="product.category">
+              {{ product.category }}
+            </p>
+            <p class="description">
+              {{ product.description?.substring(0, 60) }}...
+            </p>
+            <div class="product-footer">
+              <span class="price">${{ product.price }}</span>
+              <a
+                [routerLink]="['/products', product.id]"
+                class="btn-view"
+                >View Details</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && filteredProducts.length === 0" class="no-products">
+        <p>No products found. Try adjusting your filters.</p>
+      </div>
+    </div>
+  </div>
+</div>
