@@ -13,8 +13,12 @@ import { Product } from '../../models/product.model';
   template: `
     <div class="container" *ngIf="product">
       <h1>{{ product.name }}</h1>
-      <img [src]="product.image || '/assets/placeholder.png'" alt="{{product.name}}" class="product-img">
-      <p class="price">Price: ${{ product.price }}</p>
+      <img
+        [src]="product.image || '/assets/placeholder.png'"
+        alt="{{ product.name }}"
+        class="product-img"
+      />
+      <p class="price">Price: \${{ product.price }}</p>
       <p class="desc">{{ product.description }}</p>
 
       <div class="actions">
@@ -30,13 +34,29 @@ import { Product } from '../../models/product.model';
       <p>Loading product...</p>
     </div>
   `,
-  styles: [`
-    .container { padding: 2rem; text-align: center; }
-    .product-img { max-width: 300px; display:block; margin: 1rem auto; }
-    .price { font-weight: bold; }
-    .actions { margin-top: 1rem; }
-    .info { color: #c0392b; margin-left: 1rem; }
-  `]
+  styles: [
+    `
+      .container {
+        padding: 2rem;
+        text-align: center;
+      }
+      .product-img {
+        max-width: 300px;
+        display: block;
+        margin: 1rem auto;
+      }
+      .price {
+        font-weight: bold;
+      }
+      .actions {
+        margin-top: 1rem;
+      }
+      .info {
+        color: #c0392b;
+        margin-left: 1rem;
+      }
+    `,
+  ],
 })
 export class ProductDetailComponent implements OnInit {
   productId: string | null = null;
@@ -49,14 +69,14 @@ export class ProductDetailComponent implements OnInit {
     private productService: ProductService,
     private authService: AuthService,
     private orderService: OrderService,
-  ) { }
+  ) {}
 
   ngOnInit(): void {
     this.productId = this.route.snapshot.paramMap.get('id');
     if (this.productId) {
       this.productService.getProductById(this.productId).subscribe({
-        next: (p) => this.product = p,
-        error: () => this.product = null,
+        next: (p) => (this.product = p),
+        error: () => (this.product = null),
       });
     }
 
@@ -78,7 +98,11 @@ export class ProductDetailComponent implements OnInit {
     const orderReq = {
       items: [{ product: this.product.id || '', quantity: 1 }],
       shippingAddress: {
-        street: 'Unknown', city: 'Unknown', state: 'Unknown', zipCode: '00000', country: 'Unknown'
+        street: 'Unknown',
+        city: 'Unknown',
+        state: 'Unknown',
+        zipCode: '00000',
+        country: 'Unknown',
       },
       paymentMethod: 'credit_card' as const,
     };
@@ -91,7 +115,7 @@ export class ProductDetailComponent implements OnInit {
       error: (err) => {
         console.error(err);
         alert('Failed to place order.');
-      }
+      },
     });
   }
 }

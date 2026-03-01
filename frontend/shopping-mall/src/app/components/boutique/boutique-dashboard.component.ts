@@ -15,7 +15,7 @@ import { AuthService } from '../../services/auth.service';
       <div class="stats">
         <div class="stat">Products: {{ productsCount }}</div>
         <div class="stat">Orders: {{ ordersCount }}</div>
-        <div class="stat">Total Sales: ${{ totalSales }}</div>
+        <div class="stat">Total Sales: \${{ totalSales }}</div>
       </div>
 
       <div *ngIf="loading">Loading data...</div>
