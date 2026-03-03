@@ -14,6 +14,67 @@
       <a routerLink="/profile" routerLinkActive="active" class="nav-link nav-main">Profil</a>
     </div>
 
+    <div class="navbar-end">
+      <ng-container *ngIf="!currentUser">
+        <a routerLink="/login" routerLinkActive="active" class="nav-link">
+          Connexion
+        </a>
+        <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup">
+          S'inscrire
+        </a>
+      </ng-container>
+
+      <ng-container *ngIf="currentUser">
+        <div class="user-menu">
+          <span class="user-name">{{ currentUser.name }}</span>
+          <span class="user-role" [ngClass]="'role-' + currentUser.role">{{ currentUser.role }}</span>
+        </div>
+
+        <a *ngIf="isAcheteur()" routerLink="/cart" class="nav-link orders-shortcut cart-link" title="Panier"
+          aria-label="Panier">
+          <span class="cart-icon">🛒</span>
+          <span *ngIf="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+        </a>
+
+        <button *ngIf="isAcheteur()" class="nav-link desktop-logout" title="Déconnexion" aria-label="Déconnexion"
+          (click)="logout()">
+          ⎋
+        </button>
+
+        <div *ngIf="!isAcheteur()" class="nav-dropdown" (click)="$event.stopPropagation()">
+          <button
+            class="nav-link dropdown-toggle"
+            aria-label="Ouvrir le menu utilisateur"
+            [attr.aria-expanded]="isUserMenuOpen"
+            (click)="toggleUserMenu($event)"
+          >
+            ☰
+          </button>
+          <div class="dropdown-menu" [class.open]="isUserMenuOpen">
+            <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="dropdown-item" (click)="closeMenus()">
+              Tableau de bord Admin
+            </a>
+            <a *ngIf="isAdmin()" routerLink="/admin/users" class="dropdown-item" (click)="closeMenus()">
+              Gérer les utilisateurs
+            </a>
+            <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="dropdown-item" (click)="closeMenus()">
+              Tableau de bord Boutique
+            </a>
+            <a *ngIf="isBoutique()" routerLink="/boutique/products" class="dropdown-item" (click)="closeMenus()">
+              Mes produits
+            </a>
+            <a routerLink="/settings" class="dropdown-item" (click)="closeMenus()">
+              Settings
+            </a>
+            <hr class="dropdown-divider">
+            <button (click)="logout()" class="dropdown-item logout">
+              Déconnexion
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+
     <button class="menu-toggle" (click)="toggleMenu()" [class.active]="isMenuOpen">
       <span></span>
       <span></span>
@@ -21,71 +82,38 @@
     </button>
 
     <div class="navbar-menu" [class.active]="isMenuOpen">
-      <div class="mobile-main-links">
+      <div class="mobile-menu-links">
         <a routerLink="/" (click)="closeMenus()" class="nav-link">Accueil</a>
         <a routerLink="/products" (click)="closeMenus()" class="nav-link">Produits</a>
         <a routerLink="/profile" (click)="closeMenus()" class="nav-link">Profil</a>
         <a *ngIf="currentUser" routerLink="/settings" (click)="closeMenus()" class="nav-link">Settings</a>
-      </div>
-      <div class="navbar-end">
-        <ng-container *ngIf="!currentUser">
-          <a routerLink="/login" routerLinkActive="active" class="nav-link" (click)="closeMenus()">
-            Connexion
-          </a>
-          <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup" (click)="closeMenus()">
-            S'inscrire
-          </a>
-        </ng-container>
 
-        <ng-container *ngIf="currentUser">
-          <div class="user-menu">
-            <span class="user-name">{{ currentUser.name }}</span>
-            <span class="user-role" [ngClass]="'role-' + currentUser.role">{{ currentUser.role }}</span>
-          </div>
+        <a *ngIf="isAcheteur()" routerLink="/cart" (click)="closeMenus()" class="nav-link">
+          Panier <span *ngIf="cartCount > 0">({{ cartCount }})</span>
+        </a>
 
-          <a *ngIf="isAcheteur()" routerLink="/cart" class="nav-link orders-shortcut cart-link" title="Panier"
-            aria-label="Panier">
-            <span class="cart-icon">🛒</span>
-            <span *ngIf="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
-          </a>
+        <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="nav-link" (click)="closeMenus()">
+          Tableau de bord Admin
+        </a>
+        <a *ngIf="isAdmin()" routerLink="/admin/users" class="nav-link" (click)="closeMenus()">
+          Gérer les utilisateurs
+        </a>
+        <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="nav-link" (click)="closeMenus()">
+          Tableau de bord Boutique
+        </a>
+        <a *ngIf="isBoutique()" routerLink="/boutique/products" class="nav-link" (click)="closeMenus()">
+          Mes produits
+        </a>
 
-          <button *ngIf="isAcheteur()" class="nav-link desktop-logout" title="Déconnexion" aria-label="Déconnexion"
-            (click)="logout()">
-            ⎋
-          </button>
-
-          <div *ngIf="!isAcheteur()" class="nav-dropdown" (click)="$event.stopPropagation()">
-            <button
-              class="nav-link dropdown-toggle"
-              aria-label="Ouvrir le menu utilisateur"
-              [attr.aria-expanded]="isUserMenuOpen"
-              (click)="toggleUserMenu($event)"
-            >
-              ☰
-            </button>
-            <div class="dropdown-menu" [class.open]="isUserMenuOpen">
-              <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="dropdown-item" (click)="closeMenus()">
-                Tableau de bord Admin
-              </a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users" class="dropdown-item" (click)="closeMenus()">
-                Gérer les utilisateurs
-              </a>
-              <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="dropdown-item" (click)="closeMenus()">
-                Tableau de bord Boutique
-              </a>
-              <a *ngIf="isBoutique()" routerLink="/boutique/products" class="dropdown-item" (click)="closeMenus()">
-                Mes produits
-              </a>
-              <a routerLink="/settings" class="dropdown-item" (click)="closeMenus()">
-                Settings
-              </a>
-              <hr class="dropdown-divider">
-              <button (click)="logout()" class="dropdown-item logout">
-                Déconnexion
-              </button>
-            </div>
-          </div>
-        </ng-container>
+        <a *ngIf="!currentUser" routerLink="/login" routerLinkActive="active" class="nav-link" (click)="closeMenus()">
+          Connexion
+        </a>
+        <a *ngIf="!currentUser" routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup" (click)="closeMenus()">
+          S'inscrire
+        </a>
+        <button *ngIf="currentUser" (click)="logout()" class="nav-link mobile-logout">
+          Déconnexion
+        </button>
       </div>
     </div>
   </div>
