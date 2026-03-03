@@ -3,6 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 import { CartItem } from '../models/cart.model';
 import { Product } from '../models/product.model';
 import { getEntityId } from '../utils/id.util';
+import { CommerceSyncService } from './commerce-sync.service';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +12,10 @@ export class CartService {
   private readonly storageKey = 'shoppingMallCart';
   private readonly itemsSubject = new BehaviorSubject<CartItem[]>(this.readFromStorage());
   readonly items$ = this.itemsSubject.asObservable();
+
+  constructor(private commerceSyncService: CommerceSyncService) {
+    this.commerceSyncService.setCartReservations(this.itemsSubject.value);
+  }
 
   getItems(): CartItem[] {
     return this.itemsSubject.value;
@@ -82,6 +87,7 @@ export class CartService {
 
   private persist(items: CartItem[]): void {
     this.itemsSubject.next(items);
+    this.commerceSyncService.setCartReservations(items);
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(this.storageKey, JSON.stringify(items));
     }

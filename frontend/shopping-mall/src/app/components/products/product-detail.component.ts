@@ -126,8 +126,7 @@ export class ProductDetailComponent implements OnInit {
         alert('Commande passée avec succès.');
         this.router.navigate(['/buyer/orders']);
       },
-      error: (err) => {
-        console.error(err);
+      error: () => {
         alert('Échec de la commande.');
       },
     });

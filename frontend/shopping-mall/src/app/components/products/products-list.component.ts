@@ -8,6 +8,7 @@ import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { SellerModerationService } from '../../services/seller-moderation.service';
+import { CommerceSyncService } from '../../services/commerce-sync.service';
 import { Product } from '../../models/product.model';
 import { PRODUCT_CATEGORIES, toFrenchCategory } from '../../constants/categories';
 import { getEntityId } from '../../utils/id.util';
@@ -40,6 +41,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     private router: Router,
     private cartService: CartService,
     private sellerModerationService: SellerModerationService,
+    private commerceSyncService: CommerceSyncService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -55,6 +57,10 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     this.sellerModerationService.refresh$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.applyFilters());
+
+    this.commerceSyncService.refresh$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadProducts());
 
     this.router.events
       .pipe(
@@ -75,7 +81,14 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     this.error = '';
     this.productService.getProducts().subscribe({
       next: (products) => {
-        this.products = products;
+        this.products = products.map((product) => {
+          const id = getEntityId(product);
+          if (!id) return product;
+          return {
+            ...product,
+            stock: this.commerceSyncService.applyStockOffset(Number(product.stock || 0), id),
+          };
+        });
         this.applyFilters();
         this.loading = false;
         this.cdr.detectChanges();
@@ -178,4 +191,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     const translated = toFrenchCategory(category);
     return translated || 'Sans catégorie';
   }
+
+  trackByProductId = (_index: number, product: Product): string =>
+    getEntityId(product) || product.name || String(_index);
 }

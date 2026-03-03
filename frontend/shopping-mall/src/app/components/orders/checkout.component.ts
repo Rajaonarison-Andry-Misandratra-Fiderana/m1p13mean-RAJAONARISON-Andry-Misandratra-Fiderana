@@ -25,12 +25,17 @@ import { getEntityId } from '../../utils/id.util';
         <article class="panel">
           <h2>Articles sélectionnés</h2>
 
-          <div class="checkout-item" *ngFor="let item of items">
-            <img [src]="item.product.image || '/assets/placeholder.png'" [alt]="item.product.name" />
+          <div class="checkout-item" *ngFor="let item of items; trackBy: trackByCheckoutItem">
+            <img
+              [src]="item.product.image || '/assets/placeholder.png'"
+              [alt]="item.product.name"
+              loading="lazy"
+              decoding="async"
+            />
             <div class="item-main">
               <p class="name">{{ item.product.name }}</p>
               <p class="price">{{ item.product.price | number: '1.0-0' }} MGA</p>
-              <p class="stock">Stock: {{ item.product.stock }}</p>
+              <p class="stock">Stock restant: {{ getRemainingStock(item) }}</p>
             </div>
 
             <div class="qty">
@@ -47,6 +52,7 @@ import { getEntityId } from '../../utils/id.util';
 
         <form class="panel" (submit)="confirmOrder($event)">
           <h2>Informations de livraison</h2>
+          <div *ngIf="formError" class="panel error form-error">{{ formError }}</div>
           <div class="field">
             <label>Nom complet</label>
             <input type="text" [(ngModel)]="form.fullName" name="fullName" required />
@@ -92,12 +98,12 @@ import { getEntityId } from '../../utils/id.util';
             <button
               type="button"
               class="btn-stripe"
-              [disabled]="!canCheckout() || processingPayment"
+              [disabled]="processingPayment"
               (click)="payWithStripe()"
             >
               Payer avec Stripe
             </button>
-            <button type="submit" class="btn-primary" [disabled]="!canConfirmOrder() || processingPayment">
+            <button type="submit" class="btn-primary" [disabled]="processingPayment">
               {{ processingPayment ? 'Traitement...' : 'Confirmer la commande' }}
             </button>
           </div>
@@ -135,6 +141,9 @@ import { getEntityId } from '../../utils/id.util';
         color: #922b2b;
         border-color: #efc8c8;
         background: #fdecec;
+      }
+      .form-error {
+        margin-bottom: 0.75rem;
       }
       .checkout-item {
         display: grid;
@@ -270,6 +279,7 @@ export class CheckoutComponent implements OnInit {
   items: CartItem[] = [];
   loading = true;
   error = '';
+  formError = '';
   stripePaymentStarted = false;
   processingPayment = false;
   private checkoutRequestId: string | null = null;
@@ -294,6 +304,9 @@ export class CheckoutComponent implements OnInit {
   get totalAmount(): number {
     return this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   }
+
+  trackByCheckoutItem = (_index: number, item: CartItem): string =>
+    getEntityId(item.product) || item.product.name || String(_index);
 
   constructor(
     private route: ActivatedRoute,
@@ -378,6 +391,12 @@ export class CheckoutComponent implements OnInit {
     this.cartService.updateQuantity(productId, quantity);
   }
 
+  getRemainingStock(item: CartItem): number {
+    const productId = getEntityId(item.product);
+    if (!productId) return Math.max(0, Number(item.product.stock || 0));
+    return this.commerceSyncService.applyStockOffset(Number(item.product.stock || 0), productId);
+  }
+
   canCheckout(): boolean {
     return (
       this.items.length > 0 &&
@@ -399,9 +418,44 @@ export class CheckoutComponent implements OnInit {
     return requiredFilled && this.canCheckout();
   }
 
+  private getMissingRequiredFields(): string[] {
+    const fields: Array<{ key: keyof CheckoutComponent['form']; label: string }> = [
+      { key: 'fullName', label: 'Nom complet' },
+      { key: 'email', label: 'Email' },
+      { key: 'phone', label: 'Téléphone' },
+      { key: 'street', label: 'Adresse' },
+      { key: 'city', label: 'Ville' },
+      { key: 'state', label: 'Région' },
+      { key: 'zipCode', label: 'Code postal' },
+      { key: 'country', label: 'Pays' },
+    ];
+
+    return fields
+      .filter(({ key }) => !String(this.form[key] || '').trim())
+      .map(({ label }) => label);
+  }
+
+  private validateRequiredFormFields(): boolean {
+    const missing = this.getMissingRequiredFields();
+    if (missing.length > 0) {
+      this.formError = `Veuillez remplir les champs obligatoires: ${missing.join(', ')}.`;
+      return false;
+    }
+    this.formError = '';
+    return true;
+  }
+
   payWithStripe(): void {
-    if (!this.canCheckout()) return;
-    if (!this.stripePaymentLink) return;
+    if (!this.validateRequiredFormFields()) return;
+    if (!this.canCheckout()) {
+      this.formError = 'Impossible de payer: panier invalide ou stock insuffisant.';
+      return;
+    }
+    if (!this.stripePaymentLink) {
+      this.formError = 'Lien de paiement Stripe non configuré.';
+      return;
+    }
+    this.formError = '';
     this.stripePaymentStarted = true;
     window.open(this.stripePaymentLink, '_blank', 'noopener,noreferrer');
   }
@@ -409,7 +463,12 @@ export class CheckoutComponent implements OnInit {
   confirmOrder(e: Event): void {
     e.preventDefault();
     if (this.processingPayment) return;
-    if (!this.canConfirmOrder()) return;
+    if (!this.validateRequiredFormFields()) return;
+    if (!this.canCheckout()) {
+      this.formError = 'Impossible de confirmer: panier invalide ou stock insuffisant.';
+      return;
+    }
+    this.formError = '';
     this.processingPayment = true;
     this.error = '';
 

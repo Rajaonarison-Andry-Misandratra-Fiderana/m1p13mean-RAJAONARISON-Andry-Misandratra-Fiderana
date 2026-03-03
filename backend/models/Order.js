@@ -121,5 +121,8 @@ orderSchema.index(
   { buyer: 1, clientRequestId: 1 },
   { unique: true, partialFilterExpression: { clientRequestId: { $type: "string" } } },
 );
+orderSchema.index({ buyer: 1, createdAt: -1 });
+orderSchema.index({ "items.shop": 1, createdAt: -1 });
+orderSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Order", orderSchema);

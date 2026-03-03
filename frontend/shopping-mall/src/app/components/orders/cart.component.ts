@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CartItem } from '../../models/cart.model';
 import { CartService } from '../../services/cart.service';
+import { CommerceSyncService } from '../../services/commerce-sync.service';
 import { getEntityId } from '../../utils/id.util';
 
 @Component({
@@ -32,13 +33,18 @@ import { getEntityId } from '../../utils/id.util';
 
       <div *ngIf="items.length > 0" class="cart-layout">
         <article class="cart-items panel">
-          <div class="item" *ngFor="let item of items">
-            <img [src]="item.product.image || '/assets/placeholder.png'" [alt]="item.product.name" />
+          <div class="item" *ngFor="let item of items; trackBy: trackByCartItem">
+            <img
+              [src]="item.product.image || '/assets/placeholder.png'"
+              [alt]="item.product.name"
+              loading="lazy"
+              decoding="async"
+            />
 
             <div class="item-main">
               <p class="name">{{ item.product.name }}</p>
               <p class="meta">Prix: {{ item.product.price | number: '1.0-0' }} MGA</p>
-              <p class="meta">Stock dispo: {{ item.product.stock }}</p>
+              <p class="meta">Stock restant: {{ getRemainingStock(item) }}</p>
             </div>
 
             <div class="qty-actions">
@@ -219,8 +225,12 @@ export class CartComponent implements OnInit, OnDestroy {
   totalAmount = 0;
   private destroy$ = new Subject<void>();
 
+  trackByCartItem = (_index: number, item: CartItem): string =>
+    getEntityId(item.product) || item.product.name || String(_index);
+
   constructor(
     private cartService: CartService,
+    private commerceSyncService: CommerceSyncService,
     private router: Router,
   ) {}
 
@@ -263,5 +273,11 @@ export class CartComponent implements OnInit, OnDestroy {
 
   proceedToCheckout(): void {
     this.router.navigate(['/checkout']);
+  }
+
+  getRemainingStock(item: CartItem): number {
+    const productId = getEntityId(item.product);
+    if (!productId) return Math.max(0, Number(item.product.stock || 0));
+    return this.commerceSyncService.applyStockOffset(Number(item.product.stock || 0), productId);
   }
 }
