@@ -18,8 +18,7 @@ body {
   font-family: 'Manrope', 'Segoe UI', sans-serif;
   background:
     radial-gradient(circle at 10% -20%, rgba(13, 134, 184, 0.12), transparent 45%),
-    radial-gradient(circle at 100% 0%, rgba(15, 94, 156, 0.12), transparent 40%),
-    #f3f8fd;
+    radial-gradient(circle at 100% 0%, rgba(15, 94, 156, 0.12), transparent 40%), #f3f8fd;
   color: #152d46;
   line-height: 1.55;
   overflow-x: hidden;
@@ -47,6 +46,8 @@ h6 {
 .main-content {
   flex: 1;
   width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 app-root {
@@ -129,40 +130,40 @@ a:hover {
   }
 
   :where(
-      .panel,
-      .stat-card,
-      .table-section,
-      .profile-card,
-      .settings-card,
-      .modal,
-      .order-card,
-      .product-card
-    ) {
+    .panel,
+    .stat-card,
+    .table-section,
+    .profile-card,
+    .settings-card,
+    .modal,
+    .order-card,
+    .product-card
+  ) {
     border-radius: 10px !important;
   }
 
   :where(
-      .page-head h1,
-      .dashboard-header h1,
-      .products-header h1,
-      .profile-header h1,
-      .settings-head h1,
-      .checkout-page h1,
-      .orders-page h1
-    ) {
+    .page-head h1,
+    .dashboard-header h1,
+    .products-header h1,
+    .profile-header h1,
+    .settings-head h1,
+    .checkout-page h1,
+    .orders-page h1
+  ) {
     font-size: 1.28rem !important;
   }
 
   :where(
-      .btn-primary,
-      .btn-secondary,
-      .btn-refresh,
-      .btn-reset,
-      .btn-delete,
-      .btn-create-seller,
-      .btn-validate,
-      .btn-clear
-    ) {
+    .btn-primary,
+    .btn-secondary,
+    .btn-refresh,
+    .btn-reset,
+    .btn-delete,
+    .btn-create-seller,
+    .btn-validate,
+    .btn-clear
+  ) {
     font-size: 0.8rem !important;
     padding: 0.45rem 0.62rem !important;
   }

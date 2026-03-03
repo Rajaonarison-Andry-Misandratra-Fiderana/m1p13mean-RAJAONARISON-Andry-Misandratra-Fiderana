@@ -6,15 +6,8 @@
   position: relative;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
-}
-
-.footer-floating {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 980;
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+  width: 100%;
 }
 
 /* Overlay doré subtil comme dans la hero */
