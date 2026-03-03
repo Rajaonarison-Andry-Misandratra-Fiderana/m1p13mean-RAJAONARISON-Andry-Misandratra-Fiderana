@@ -64,7 +64,10 @@ exports.getProducts = async (req, res) => {
     const { category, shop, search, minPrice, maxPrice, page, limit } = req.query;
     let filter = { isActive: true };
     const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
-    const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 0));
+    const rawLimit = Number.parseInt(limit, 10);
+    const parsedLimit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(100, rawLimit)
+      : 0;
     const skip = parsedLimit ? (parsedPage - 1) * parsedLimit : 0;
 
     if (category) filter.category = category;

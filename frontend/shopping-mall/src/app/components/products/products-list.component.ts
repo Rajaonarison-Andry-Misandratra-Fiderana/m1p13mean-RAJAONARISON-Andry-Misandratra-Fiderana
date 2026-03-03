@@ -81,7 +81,14 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     this.error = '';
     this.productService.getProducts().subscribe({
       next: (products) => {
-        this.products = products;
+        this.products = products.map((product) => {
+          const id = getEntityId(product);
+          if (!id) return product;
+          return {
+            ...product,
+            stock: this.commerceSyncService.applyStockOffset(Number(product.stock || 0), id),
+          };
+        });
         this.applyFilters();
         this.loading = false;
         this.cdr.detectChanges();

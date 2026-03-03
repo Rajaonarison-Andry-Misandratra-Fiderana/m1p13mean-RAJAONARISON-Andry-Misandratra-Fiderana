@@ -33,7 +33,6 @@ export class CommerceSyncService {
     if (!items.length) return;
 
     const transfers = this.readTransfers();
-    const sold = this.readSoldOffsets();
 
     for (const item of items) {
       const productId = getEntityId(item.product);
@@ -44,11 +43,11 @@ export class CommerceSyncService {
 
       const amount = (item.product.price || 0) * item.quantity;
       transfers[shopId] = (transfers[shopId] || 0) + amount;
-      sold[productId] = (sold[productId] || 0) + item.quantity;
     }
 
     this.writeTransfers(transfers);
-    this.writeSoldOffsets(sold);
+    // Keep persisted sold offsets reset: stock is now decremented in backend DB at payment validation.
+    this.writeSoldOffsets({});
     this.refreshSubject.next();
   }
 
@@ -60,9 +59,8 @@ export class CommerceSyncService {
 
   applyStockOffset(stock: number, productId: string): number {
     if (!productId) return stock;
-    const sold = this.readSoldOffsets();
     const reserved = this.readReservedOffsets();
-    const offset = (sold[productId] || 0) + (reserved[productId] || 0);
+    const offset = reserved[productId] || 0;
     return Math.max(0, (stock || 0) - offset);
   }
 
