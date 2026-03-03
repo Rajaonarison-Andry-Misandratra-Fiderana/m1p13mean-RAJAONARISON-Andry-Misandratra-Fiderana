@@ -11,6 +11,7 @@
 html,
 body {
   height: 100%;
+  max-width: 100%;
 }
 
 body {
@@ -21,6 +22,7 @@ body {
     #f3f8fd;
   color: #152d46;
   line-height: 1.55;
+  overflow-x: hidden;
 }
 
 body.auth-no-scroll {
@@ -51,6 +53,22 @@ app-root {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
 }
 
 ::-webkit-scrollbar {
@@ -104,5 +122,11 @@ a:hover {
 @media (max-width: 768px) {
   .container {
     padding: 0 1rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .container {
+    padding: 0 0.75rem;
   }
 }

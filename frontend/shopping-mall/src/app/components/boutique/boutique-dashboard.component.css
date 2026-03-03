@@ -109,7 +109,7 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  min-width: 620px;
 }
 
 thead th {
@@ -146,5 +146,23 @@ tbody tr:hover {
 @media (max-width: 580px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .seller-dashboard {
+    padding: 0 0.75rem;
+  }
+
+  table {
+    min-width: 500px;
+  }
+}
+
+@media (max-width: 390px) {
+  .seller-dashboard {
+    padding: 0 0.5rem;
+  }
+
+  table {
+    min-width: 430px;
   }
 }

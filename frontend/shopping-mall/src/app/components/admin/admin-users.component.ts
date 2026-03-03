@@ -408,7 +408,7 @@ type UserRow = {
       table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 680px;
+        min-width: 620px;
       }
       th,
       td {
@@ -616,6 +616,26 @@ type UserRow = {
       @media (max-width: 600px) {
         .stats-grid {
           grid-template-columns: 1fr;
+        }
+        table {
+          min-width: 500px;
+        }
+        .modal {
+          width: 94%;
+          max-height: 86vh;
+        }
+        .modal-header,
+        .modal-body,
+        .modal-footer {
+          padding: 1rem;
+        }
+      }
+      @media (max-width: 390px) {
+        .users-page {
+          padding: 0 0.55rem;
+        }
+        table {
+          min-width: 430px;
         }
       }
     `,

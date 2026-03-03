@@ -298,7 +298,7 @@ import { getEntityId } from '../../utils/id.util';
       table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 720px;
+        min-width: 620px;
         table-layout: fixed;
       }
       thead th {
@@ -353,7 +353,7 @@ import { getEntityId } from '../../utils/id.util';
           grid-template-columns: 1fr;
         }
         table {
-          min-width: 680px;
+          min-width: 560px;
         }
       }
       @media (max-width: 600px) {
@@ -384,7 +384,7 @@ import { getEntityId } from '../../utils/id.util';
           font-size: 0.96rem;
         }
         table {
-          min-width: 600px;
+          min-width: 500px;
         }
         thead th,
         tbody td {
@@ -394,6 +394,17 @@ import { getEntityId } from '../../utils/id.util';
         .btn-delete {
           width: 100%;
           font-size: 0.8rem;
+        }
+      }
+      @media (max-width: 390px) {
+        .admin-page {
+          padding: 0 0.45rem 0.7rem;
+        }
+        .panel {
+          padding: 0.62rem;
+        }
+        table {
+          min-width: 440px;
         }
       }
     `,

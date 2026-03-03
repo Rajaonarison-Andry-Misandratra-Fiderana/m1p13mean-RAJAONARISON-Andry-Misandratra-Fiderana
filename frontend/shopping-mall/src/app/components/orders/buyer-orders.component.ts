@@ -116,6 +116,19 @@ import { getEntityId } from '../../utils/id.util';
         padding: 0.3rem 0;
         border-bottom: 1px dashed #e2ecf5;
       }
+      @media (max-width: 480px) {
+        .orders-page {
+          padding: 0 0.7rem;
+          margin-top: 1rem;
+        }
+        .order-card {
+          padding: 0.75rem;
+        }
+        .order-head {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
     `,
   ],
 })

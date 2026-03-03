@@ -155,7 +155,7 @@
 
 /* Search Input */
 .search-input {
-  width: 85%;
+  width: 100%;
   padding: 0.8rem 1rem;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
@@ -826,6 +826,22 @@
     width: 32px;
     height: 32px;
     font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .products-container {
+    padding: 0 0.5rem;
+  }
+
+  .products-grid-section,
+  .sidebar {
+    padding: 0.85rem;
+  }
+
+  .product-popup {
+    padding: 0.85rem;
+    border-radius: 16px;
   }
 }
 

@@ -247,6 +247,22 @@ import { getEntityId } from '../../utils/id.util';
           flex-direction: column;
         }
       }
+      @media (max-width: 480px) {
+        .checkout-page {
+          padding: 0 0.7rem;
+          margin-top: 1rem;
+        }
+        .panel {
+          padding: 0.8rem;
+        }
+        .split {
+          grid-template-columns: 1fr;
+          gap: 0;
+        }
+        .checkout-page h1 {
+          font-size: 1.5rem;
+        }
+      }
     `,
   ],
 })

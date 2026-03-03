@@ -4,10 +4,11 @@
   background: #ffffff;
   color: #1e2b3c;
   font-family: 'Inter', sans-serif;
-  height: 100vh;
+  height: calc(100dvh - var(--app-nav-height, 76px));
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Style de la scrollbar (optionnel, pour un look plus luxueux) */
@@ -35,7 +36,7 @@
 .cta-section {
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  min-height: 100vh;
+  min-height: calc(100dvh - var(--app-nav-height, 76px));
   display: flex;
   align-items: center;
   position: relative;
@@ -457,6 +458,13 @@
     padding: 3rem 0;
   }
 
+  .hero-section,
+  .categories-section,
+  .info-section,
+  .cta-section {
+    min-height: auto;
+  }
+
   .section-head {
     margin-bottom: 2rem;
   }
@@ -478,6 +486,10 @@
 }
 
 @media (max-width: 480px) {
+  .home-container {
+    scroll-snap-type: y proximity;
+  }
+
   .section-container {
     padding: 0 1rem;
   }
@@ -501,6 +513,14 @@
 
   .cta-box h2 {
     font-size: 1.5rem;
+  }
+
+  .hero-actions {
+    margin-top: 1.6rem;
+  }
+
+  .hero-stats {
+    margin-top: 1.8rem;
   }
 }
 

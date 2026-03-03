@@ -194,6 +194,22 @@ import { getEntityId } from '../../utils/id.util';
           justify-items: start;
         }
       }
+      @media (max-width: 480px) {
+        .cart-page {
+          padding: 0 0.7rem;
+          margin-top: 1rem;
+        }
+        .cart-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .btn-clear {
+          width: 100%;
+        }
+        .panel {
+          padding: 0.8rem;
+        }
+      }
     `,
   ],
 })
