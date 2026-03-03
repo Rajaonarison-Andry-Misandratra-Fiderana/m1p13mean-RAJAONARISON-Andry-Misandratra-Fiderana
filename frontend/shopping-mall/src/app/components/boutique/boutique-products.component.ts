@@ -23,7 +23,6 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   createError: string | null = null;
   publishAccessMessage: string | null = null;
   isSeller = false;
-  boutiqueStatus: 'pending' | 'approved' | 'rejected' | '' = '';
   assignedBox = '';
   private destroy$ = new Subject<void>();
 
@@ -60,11 +59,9 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.isSeller = this.authService.hasRole(['boutique']);
     const currentUser = this.authService.currentUserValue;
-    this.boutiqueStatus = currentUser?.boutiqueStatus || '';
     this.assignedBox = currentUser?.assignedBox || '';
 
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
-      this.boutiqueStatus = user?.boutiqueStatus || '';
       this.assignedBox = user?.assignedBox || '';
       this.publishAccessMessage = this.getPublishAccessMessage();
     });
@@ -254,8 +251,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.canPublishNow()) {
-      this.createError =
-        "Votre boutique est en attente de validation admin ou aucun box n'est attribué.";
+      this.createError = "Aucun box n'est attribué à votre boutique. Contactez un administrateur.";
       return;
     }
 

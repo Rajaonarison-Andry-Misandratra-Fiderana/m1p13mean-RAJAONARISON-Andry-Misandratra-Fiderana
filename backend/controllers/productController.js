@@ -21,7 +21,7 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    const seller = await User.findById(req.user.id).select("role boutiqueStatus assignedBox");
+    const seller = await User.findById(req.user.id).select("role assignedBox");
     if (!seller) {
       return res.status(404).json({ message: "Seller account not found." });
     }
@@ -29,14 +29,8 @@ exports.createProduct = async (req, res) => {
       return res.status(403).json({ message: "Only boutique/admin can publish products." });
     }
 
-    // Admin can publish without boutique approval workflow.
+    // Sellers are created by admins now; no pending approval workflow.
     if (seller.role === "boutique") {
-      const boutiqueStatus = seller.boutiqueStatus || "approved";
-      if (boutiqueStatus !== "approved") {
-        return res.status(403).json({
-          message: "Your boutique profile is pending. Wait for admin approval before publishing.",
-        });
-      }
       if (!seller.assignedBox) {
         return res.status(403).json({
           message: "No box assigned yet. Ask admin to assign your box before publishing.",

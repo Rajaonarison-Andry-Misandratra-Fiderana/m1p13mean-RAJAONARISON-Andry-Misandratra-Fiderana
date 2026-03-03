@@ -278,16 +278,6 @@ exports.updateUser = async (req, res) => {
       payload.assignedBox = "";
     }
 
-    if (payload.role === "boutique" && !payload.boutiqueStatus) {
-      payload.boutiqueStatus = "pending";
-    }
-
-    if (payload.boutiqueStatus === "approved" && !payload.assignedBox) {
-      return res.status(400).json({
-        message: "Assigned box is required when approving a boutique.",
-      });
-    }
-
     const user = await User.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true,
