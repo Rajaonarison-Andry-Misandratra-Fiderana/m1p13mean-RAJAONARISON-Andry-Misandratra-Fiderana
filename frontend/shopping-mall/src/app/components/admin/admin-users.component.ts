@@ -26,7 +26,6 @@ type UserRow = {
       <header class="page-head">
         <div>
           <h1>Gestion des utilisateurs</h1>
-          <p>Données récupérées depuis meanapp: name, email, role.</p>
         </div>
         <div class="head-actions">
           <button type="button" class="btn-create-seller" (click)="openCreateSellerModal()">
@@ -161,6 +160,15 @@ type UserRow = {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="bottom-actions">
+        <button type="button" class="btn-create-seller" (click)="openCreateSellerModal()">
+          + Créer vendeur
+        </button>
+        <button type="button" class="btn-refresh" (click)="refreshNow()" [disabled]="loading">
+          Actualiser
+        </button>
       </div>
 
       <div class="modal-overlay" *ngIf="showCreateSellerModal">
@@ -380,10 +388,16 @@ type UserRow = {
       }
       .search-input {
         width: 100%;
+        min-width: 0;
+        max-width: 100%;
         border: 1px solid #c9dced;
         border-radius: 10px;
         padding: 0.6rem 0.7rem;
         font: inherit;
+        box-sizing: border-box;
+      }
+      .bottom-actions {
+        display: none;
       }
       .panel {
         margin-top: 0.9rem;
@@ -614,6 +628,19 @@ type UserRow = {
         }
       }
       @media (max-width: 600px) {
+        .head-actions {
+          display: none;
+        }
+        .bottom-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+          margin-top: 0.95rem;
+        }
+        .bottom-actions .btn-create-seller,
+        .bottom-actions .btn-refresh {
+          width: 100%;
+        }
         .stats-grid {
           grid-template-columns: 1fr;
         }

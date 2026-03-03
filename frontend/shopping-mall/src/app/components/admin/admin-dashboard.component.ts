@@ -136,7 +136,7 @@ import { toFrenchCategory } from '../../constants/categories';
     `
       .admin-page {
         max-width: 1280px;
-        margin: 1rem auto 1.5rem;
+        margin: 1.35rem auto 1.5rem;
         padding: 0 1rem 1rem;
         box-sizing: border-box;
         background:

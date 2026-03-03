@@ -156,6 +156,8 @@
 /* Search Input */
 .search-input {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 0.8rem 1rem;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 8px;
@@ -164,6 +166,7 @@
   color: #1e2b3c;
   transition: all 0.3s ease;
   background: #fafafa;
+  box-sizing: border-box;
 }
 
 .search-input:hover {

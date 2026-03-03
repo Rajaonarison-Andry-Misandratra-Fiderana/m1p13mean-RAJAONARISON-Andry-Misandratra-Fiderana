@@ -62,7 +62,8 @@ export class FooterComponent implements OnInit, OnDestroy {
       if (!this.isHomeRoute() || !this.isDesktopViewport()) return;
       const target = document.querySelector('.home-container') as HTMLElement | null;
       if (!target) {
-        this.showFooter = false;
+        // Fallback: avoid invisible footer if container is not yet mounted.
+        this.showFooter = true;
         return;
       }
 
@@ -83,6 +84,11 @@ export class FooterComponent implements OnInit, OnDestroy {
 
     const target = this.homeScrollTarget;
     const bottomThreshold = 12;
+    const scrollableDistance = Math.max(0, target.scrollHeight - target.clientHeight);
+    if (scrollableDistance <= 4) {
+      this.showFooter = true;
+      return;
+    }
     const isAtBottom =
       target.scrollTop + target.clientHeight >= target.scrollHeight - bottomThreshold;
     this.showFooter = isAtBottom;
