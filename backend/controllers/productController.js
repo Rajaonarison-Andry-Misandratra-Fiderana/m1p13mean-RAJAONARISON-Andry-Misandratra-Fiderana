@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const User = require("../models/User");
 
 const normalizeLocation = (value) => {
   const raw = String(value || "").trim();
@@ -12,14 +13,38 @@ const normalizeLocation = (value) => {
 // CREATE
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, stock, description, image, category, location } = req.body;
-    const normalizedLocation = normalizeLocation(location);
+    const { name, price, stock, description, image, category } = req.body;
 
-    if (!name || !price || !normalizedLocation) {
+    if (!name || !price) {
       return res.status(400).json({
-        message: "Name, price and location are required. Location format must be like 'Box 5'.",
+        message: "Name and price are required.",
       });
     }
+
+    const seller = await User.findById(req.user.id).select("role boutiqueStatus assignedBox");
+    if (!seller) {
+      return res.status(404).json({ message: "Seller account not found." });
+    }
+    if (seller.role !== "boutique" && seller.role !== "admin") {
+      return res.status(403).json({ message: "Only boutique/admin can publish products." });
+    }
+
+    // Admin can publish without boutique approval workflow.
+    if (seller.role === "boutique") {
+      const boutiqueStatus = seller.boutiqueStatus || "approved";
+      if (boutiqueStatus !== "approved") {
+        return res.status(403).json({
+          message: "Your boutique profile is pending. Wait for admin approval before publishing.",
+        });
+      }
+      if (!seller.assignedBox) {
+        return res.status(403).json({
+          message: "No box assigned yet. Ask admin to assign your box before publishing.",
+        });
+      }
+    }
+
+    const normalizedLocation = normalizeLocation(seller.assignedBox);
 
     const product = new Product({
       name,

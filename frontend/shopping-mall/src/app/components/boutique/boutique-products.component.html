@@ -3,8 +3,14 @@
     <div>
       <h1>Mes produits</h1>
       <p>Gérez votre catalogue et vos disponibilités.</p>
+      <p class="meta">
+        Box attribué: {{ assignedBox || 'En attente admin' }} • Statut boutique:
+        {{ boutiqueStatus || 'pending' }}
+      </p>
     </div>
-    <button *ngIf="isSeller" class="btn-primary" (click)="openCreateModal()">Ajouter un produit</button>
+    <button *ngIf="isSeller" class="btn-primary" [disabled]="!canPublishNow()" (click)="openCreateModal()">
+      Ajouter un produit
+    </button>
   </header>
 
   <div *ngIf="loading" class="status-panel">Chargement des produits...</div>
@@ -54,11 +60,6 @@
             <label>Stock</label>
             <input type="number" [(ngModel)]="newProduct.stock" name="stock" required min="0" />
           </div>
-        </div>
-
-        <div class="field">
-          <label>Emplacement (ex: Box 5)</label>
-          <input type="text" [(ngModel)]="newProduct.location" name="location" required minlength="2" />
         </div>
 
         <div class="field">

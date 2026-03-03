@@ -95,6 +95,8 @@ export class AuthService {
           name: u.name || '',
           email: u.email || '',
           role: (u.role || 'acheteur') as User['role'],
+          boutiqueStatus: (u.boutiqueStatus || 'approved') as User['boutiqueStatus'],
+          assignedBox: u.assignedBox || '',
           createdAt: u.createdAt,
           updatedAt: u.updatedAt,
         }));
@@ -102,7 +104,10 @@ export class AuthService {
     );
   }
 
-  updateUser(id: string, payload: Partial<Pick<User, 'name' | 'email' | 'role'>>): Observable<User> {
+  updateUser(
+    id: string,
+    payload: Partial<Pick<User, 'name' | 'email' | 'role' | 'boutiqueStatus' | 'assignedBox'>>,
+  ): Observable<User> {
     return this.http
       .put<User>(`${this.apiUrl}/${id}`, payload)
       .pipe(tap(() => this.usersRefreshSubject.next()));

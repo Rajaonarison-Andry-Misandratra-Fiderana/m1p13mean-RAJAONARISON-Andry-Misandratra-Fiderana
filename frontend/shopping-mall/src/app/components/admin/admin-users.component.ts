@@ -15,6 +15,7 @@ type UserRow = {
   user: User;
   id: string;
   banned: boolean;
+  boxDraft: string;
 };
 
 @Component({
@@ -54,6 +55,8 @@ type UserRow = {
               <th>Email</th>
               <th>Rôle</th>
               <th>Statut</th>
+              <th>Validation boutique</th>
+              <th>Box</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -72,6 +75,28 @@ type UserRow = {
                 </span>
               </td>
               <td>
+                <span *ngIf="row.user.role !== 'boutique'">-</span>
+                <span
+                  *ngIf="row.user.role === 'boutique'"
+                  class="badge"
+                  [class.badge-warning]="row.user.boutiqueStatus === 'pending'"
+                  [class.badge-ok]="row.user.boutiqueStatus === 'approved'"
+                  [class.badge-danger]="row.user.boutiqueStatus === 'rejected'"
+                >
+                  {{ row.user.boutiqueStatus || 'pending' }}
+                </span>
+              </td>
+              <td>
+                <span *ngIf="row.user.role !== 'boutique'">-</span>
+                <input
+                  *ngIf="row.user.role === 'boutique'"
+                  type="text"
+                  class="box-input"
+                  placeholder="Box 5"
+                  [(ngModel)]="row.boxDraft"
+                />
+              </td>
+              <td>
                 <button
                   *ngIf="!row.banned"
                   type="button"
@@ -83,6 +108,22 @@ type UserRow = {
                 </button>
                 <button *ngIf="row.banned" type="button" class="btn-unban" (click)="unbanUser(row)">
                   Déban
+                </button>
+                <button
+                  *ngIf="row.user.role === 'boutique'"
+                  type="button"
+                  class="btn-approve"
+                  (click)="approveBoutique(row)"
+                >
+                  Valider boutique
+                </button>
+                <button
+                  *ngIf="row.user.role === 'boutique'"
+                  type="button"
+                  class="btn-reject"
+                  (click)="rejectBoutique(row)"
+                >
+                  Rejeter
                 </button>
                 <button type="button" class="btn-history" (click)="openHistoryModal(row)">
                   Historique
@@ -98,7 +139,7 @@ type UserRow = {
               </td>
             </tr>
             <tr *ngIf="filteredRows.length === 0">
-              <td colspan="5" class="empty">Aucun utilisateur trouvé.</td>
+              <td colspan="7" class="empty">Aucun utilisateur trouvé.</td>
             </tr>
           </tbody>
         </table>
@@ -260,7 +301,9 @@ type UserRow = {
         color: #9d2d2d;
       }
       .btn-ban,
-      .btn-unban {
+      .btn-unban,
+      .btn-approve,
+      .btn-reject {
         border: 0;
         border-radius: 8px;
         padding: 0.4rem 0.6rem;
@@ -274,6 +317,27 @@ type UserRow = {
       .btn-unban {
         background: #e9f8f0;
         color: #1d7d53;
+      }
+      .btn-approve {
+        background: #e8f4fd;
+        color: #0f5e9c;
+        margin-left: 0.3rem;
+      }
+      .btn-reject {
+        background: #fef3e5;
+        color: #8b5a00;
+        margin-left: 0.3rem;
+      }
+      .badge-warning {
+        background: #fef3e5;
+        color: #8b5a00;
+      }
+      .box-input {
+        border: 1px solid #c9dced;
+        border-radius: 8px;
+        padding: 0.35rem 0.45rem;
+        font: inherit;
+        max-width: 105px;
       }
       .empty {
         text-align: center;
@@ -485,6 +549,7 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
             user,
             id,
             banned: !!id && bannedIds.has(id),
+            boxDraft: user.assignedBox || '',
           } as UserRow;
         });
         this.applyFilters();
@@ -513,7 +578,7 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
     this.filteredRows = this.rows.filter((row) => {
       if (!q) return true;
       const haystack = this.normalize(
-        `${row.user.name || ''} ${row.user.email || ''} ${row.user.role || ''}`,
+        `${row.user.name || ''} ${row.user.email || ''} ${row.user.role || ''} ${row.user.boutiqueStatus || ''} ${row.user.assignedBox || ''}`,
       );
       return haystack.includes(q);
     });
@@ -531,6 +596,46 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
     this.loadUsers(false);
   }
 
+  approveBoutique(row: UserRow): void {
+    if (!row.id || row.user.role !== 'boutique') return;
+    const box = this.normalizeBox(row.boxDraft);
+    if (!box) {
+      alert("Veuillez renseigner un box valide (ex: 'Box 5').");
+      return;
+    }
+
+    this.authService
+      .updateUser(row.id, {
+        boutiqueStatus: 'approved',
+        assignedBox: box,
+      })
+      .subscribe({
+        next: () => this.loadUsers(false),
+        error: (err) => {
+          alert(
+            `Erreur: ${
+              err?.error?.message || "Impossible de valider la boutique et d'assigner le box."
+            }`,
+          );
+        },
+      });
+  }
+
+  rejectBoutique(row: UserRow): void {
+    if (!row.id || row.user.role !== 'boutique') return;
+    this.authService
+      .updateUser(row.id, {
+        boutiqueStatus: 'rejected',
+        assignedBox: '',
+      })
+      .subscribe({
+        next: () => this.loadUsers(false),
+        error: (err) => {
+          alert(`Erreur: ${err?.error?.message || 'Impossible de rejeter la boutique.'}`);
+        },
+      });
+  }
+
   isCurrentAdmin(row: UserRow): boolean {
     return !!row.id && row.id === this.currentAdminId;
   }
@@ -541,6 +646,14 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
+  }
+
+  private normalizeBox(value: string): string {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const match = raw.match(/^(?:box\s*)?([a-z0-9-]+)$/i);
+    if (!match) return '';
+    return `Box ${match[1].toUpperCase()}`;
   }
 
   openHistoryModal(row: UserRow): void {

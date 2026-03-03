@@ -5,6 +5,8 @@ export interface User {
   email: string;
   password?: string;
   role: 'admin' | 'boutique' | 'acheteur';
+  boutiqueStatus?: 'pending' | 'approved' | 'rejected';
+  assignedBox?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

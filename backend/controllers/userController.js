@@ -2,6 +2,14 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+const normalizeBox = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const match = raw.match(/^(?:box\s*)?([a-z0-9-]+)$/i);
+  if (!match) return "";
+  return `Box ${match[1].toUpperCase()}`;
+};
+
 // SIGNUP
 exports.signup = async (req, res) => {
   try {
@@ -18,11 +26,16 @@ exports.signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create user
+    const requestedRole = role || "acheteur";
+    const isBoutique = requestedRole === "boutique";
+
     user = new User({
       name,
       email,
       password: hashedPassword,
-      role: role || "acheteur",
+      role: requestedRole,
+      boutiqueStatus: isBoutique ? "pending" : "approved",
+      assignedBox: "",
     });
 
     await user.save();
@@ -41,6 +54,8 @@ exports.signup = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        boutiqueStatus: user.boutiqueStatus || "approved",
+        assignedBox: user.assignedBox,
       },
     });
   } catch (err) {
@@ -79,6 +94,8 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        boutiqueStatus: user.boutiqueStatus || "approved",
+        assignedBox: user.assignedBox,
       },
     });
   } catch (err) {
@@ -109,11 +126,42 @@ exports.getAllUsers = async (req, res) => {
 // UPDATE USER (Admin)
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+    const payload = { ...req.body };
+
+    if (Object.prototype.hasOwnProperty.call(payload, "assignedBox")) {
+      const normalizedBox = normalizeBox(payload.assignedBox);
+      if (payload.assignedBox && !normalizedBox) {
+        return res.status(400).json({
+          message: "Invalid box format. Use format like 'Box 5'.",
+        });
+      }
+      payload.assignedBox = normalizedBox;
+    }
+
+    if (payload.role && payload.role !== "boutique") {
+      payload.boutiqueStatus = "approved";
+      payload.assignedBox = "";
+    }
+
+    if (payload.role === "boutique" && !payload.boutiqueStatus) {
+      payload.boutiqueStatus = "pending";
+    }
+
+    if (payload.boutiqueStatus === "approved" && !payload.assignedBox) {
+      return res.status(400).json({
+        message: "Assigned box is required when approving a boutique.",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, payload, {
       new: true,
+      runValidators: true,
     }).select("-password");
     res.json(user);
   } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(400).json({ message: "This box is already assigned to another boutique." });
+    }
     res.status(500).json({ message: err.message });
   }
 };

@@ -22,13 +22,14 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   error: string | null = null;
   createError: string | null = null;
   isSeller = false;
+  boutiqueStatus: 'pending' | 'approved' | 'rejected' | '' = '';
+  assignedBox = '';
   private destroy$ = new Subject<void>();
 
   newProduct: Partial<Product> = {
     name: '',
     price: 0,
     stock: 0,
-    location: '',
     description: '',
     category: '',
     image: '',
@@ -56,6 +57,14 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.isSeller = this.authService.hasRole(['boutique']);
+    const currentUser = this.authService.currentUserValue;
+    this.boutiqueStatus = currentUser?.boutiqueStatus || '';
+    this.assignedBox = currentUser?.assignedBox || '';
+
+    this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
+      this.boutiqueStatus = user?.boutiqueStatus || '';
+      this.assignedBox = user?.assignedBox || '';
+    });
 
     this.authService.currentUser$
       .pipe(
@@ -121,7 +130,6 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
       name: '',
       price: 0,
       stock: 0,
-      location: '',
       description: '',
       category: '',
       image: '',
@@ -210,6 +218,11 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
       this.createError = 'Seuls les vendeurs peuvent publier un produit.';
       return;
     }
+    if (!this.canPublishNow()) {
+      this.createError =
+        "Votre boutique est en attente de validation admin ou aucun box n'est attribué.";
+      return;
+    }
 
     const shopId = getEntityId(this.authService.currentUserValue);
     if (!shopId) {
@@ -222,7 +235,6 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
       name: String(this.newProduct.name || '').trim(),
       price: Number(this.newProduct.price || 0),
       stock: Number(this.newProduct.stock || 0),
-      location: this.newProduct.location ? String(this.newProduct.location).trim() : undefined,
       description: this.newProduct.description
         ? String(this.newProduct.description).trim()
         : undefined,
@@ -233,7 +245,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
     if (!this.canPublishProduct()) {
       this.createError =
-        'Tous les champs sont obligatoires: nom, description, prix (> 0), stock (>= 0), emplacement, catégorie et image.';
+        'Tous les champs sont obligatoires: nom, description, prix (> 0), stock (>= 0), catégorie et image.';
       return;
     }
 
@@ -280,10 +292,13 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     });
   }
 
+  canPublishNow(): boolean {
+    return this.isSeller && this.boutiqueStatus === 'approved' && !!this.assignedBox;
+  }
+
   canPublishProduct(): boolean {
     const name = String(this.newProduct.name || '').trim();
     const description = String(this.newProduct.description || '').trim();
-    const location = String(this.newProduct.location || '').trim();
     const category = String(this.newProduct.category || '').trim();
     const price = Number(this.newProduct.price || 0);
     const stock = Number(this.newProduct.stock || 0);
@@ -291,7 +306,6 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     return (
       !!name &&
       !!description &&
-      !!location &&
       !!category &&
       Number.isFinite(price) &&
       price > 0 &&
