@@ -56,9 +56,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/signup`, request).pipe(
       tap(response => {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        this.setCurrentUser(response.user);
         this.tokenSubject.next(response.token);
-        this.currentUserSubject.next(response.user);
       })
     );
   }
@@ -67,9 +66,8 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, request).pipe(
       tap(response => {
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        this.setCurrentUser(response.user);
         this.tokenSubject.next(response.token);
-        this.currentUserSubject.next(response.user);
       })
     );
   }
@@ -82,24 +80,17 @@ export class AuthService {
   }
 
   getProfile(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/profile`);
+    return this.http.get<User>(`${this.apiUrl}/profile`).pipe(
+      map((user) => this.normalizeUser(user)),
+      tap((user) => this.setCurrentUser(user)),
+    );
   }
 
   getAllUsers(): Observable<User[]> {
     return this.http.get<unknown>(this.apiUrl).pipe(
       map((response) => {
         const users = this.extractUsers(response);
-        return users.map((u) => ({
-          id: u.id || u._id,
-          _id: u._id || u.id,
-          name: u.name || '',
-          email: u.email || '',
-          role: (u.role || 'acheteur') as User['role'],
-          boutiqueStatus: (u.boutiqueStatus || 'approved') as User['boutiqueStatus'],
-          assignedBox: u.assignedBox || '',
-          createdAt: u.createdAt,
-          updatedAt: u.updatedAt,
-        }));
+        return users.map((u) => this.normalizeUser(u));
       }),
     );
   }
@@ -140,5 +131,25 @@ export class AuthService {
     if (Array.isArray(asObject?.data)) return asObject.data;
     if (Array.isArray(asObject?.result)) return asObject.result;
     return [];
+  }
+
+  private normalizeUser(user: Partial<User>): User {
+    return {
+      id: user.id || user._id,
+      _id: user._id || user.id,
+      name: user.name || '',
+      email: user.email || '',
+      role: (user.role || 'acheteur') as User['role'],
+      boutiqueStatus: (user.boutiqueStatus || 'approved') as User['boutiqueStatus'],
+      assignedBox: user.assignedBox || '',
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
+  private setCurrentUser(user: Partial<User>): void {
+    const normalized = this.normalizeUser(user);
+    localStorage.setItem('user', JSON.stringify(normalized));
+    this.currentUserSubject.next(normalized);
   }
 }

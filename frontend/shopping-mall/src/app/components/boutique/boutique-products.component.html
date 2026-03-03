@@ -8,13 +8,14 @@
         {{ boutiqueStatus || 'pending' }}
       </p>
     </div>
-    <button *ngIf="isSeller" class="btn-primary" [disabled]="!canPublishNow()" (click)="openCreateModal()">
+    <button *ngIf="isSeller" class="btn-primary" (click)="openCreateModal()">
       Ajouter un produit
     </button>
   </header>
 
   <div *ngIf="loading" class="status-panel">Chargement des produits...</div>
   <div *ngIf="error" class="status-panel error">{{ error }}</div>
+  <div *ngIf="publishAccessMessage" class="status-panel error">{{ publishAccessMessage }}</div>
 
   <div *ngIf="!loading && products.length === 0" class="empty-state">
     Aucun produit disponible pour cette boutique.

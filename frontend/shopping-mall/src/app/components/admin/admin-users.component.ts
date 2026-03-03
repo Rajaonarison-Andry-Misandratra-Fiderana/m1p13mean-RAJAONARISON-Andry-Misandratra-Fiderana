@@ -44,6 +44,25 @@ type UserRow = {
         />
       </div>
 
+      <section class="stats-grid" *ngIf="!loading">
+        <article class="stat-card">
+          <p class="label">Utilisateurs</p>
+          <p class="value">{{ rows.length }}</p>
+        </article>
+        <article class="stat-card">
+          <p class="label">Boutiques pending</p>
+          <p class="value">{{ pendingBoutiquesCount }}</p>
+        </article>
+        <article class="stat-card">
+          <p class="label">Boutiques validées</p>
+          <p class="value">{{ approvedBoutiquesCount }}</p>
+        </article>
+        <article class="stat-card">
+          <p class="label">Comptes bannis</p>
+          <p class="value">{{ bannedCount }}</p>
+        </article>
+      </section>
+
       <div *ngIf="loading" class="panel">Chargement des utilisateurs...</div>
       <div *ngIf="error" class="panel error">{{ error }}</div>
 
@@ -97,45 +116,47 @@ type UserRow = {
                 />
               </td>
               <td>
-                <button
-                  *ngIf="!row.banned"
-                  type="button"
-                  class="btn-ban"
-                  (click)="banUser(row)"
-                  [disabled]="isCurrentAdmin(row)"
-                >
-                  Ban
-                </button>
-                <button *ngIf="row.banned" type="button" class="btn-unban" (click)="unbanUser(row)">
-                  Déban
-                </button>
-                <button
-                  *ngIf="row.user.role === 'boutique'"
-                  type="button"
-                  class="btn-approve"
-                  (click)="approveBoutique(row)"
-                >
-                  Valider boutique
-                </button>
-                <button
-                  *ngIf="row.user.role === 'boutique'"
-                  type="button"
-                  class="btn-reject"
-                  (click)="rejectBoutique(row)"
-                >
-                  Rejeter
-                </button>
-                <button type="button" class="btn-history" (click)="openHistoryModal(row)">
-                  Historique
-                </button>
-                <button
-                  type="button"
-                  class="btn-delete"
-                  (click)="deleteUser(row)"
-                  [disabled]="isCurrentAdmin(row)"
-                >
-                  Supprimer
-                </button>
+                <div class="action-group">
+                  <button
+                    *ngIf="!row.banned"
+                    type="button"
+                    class="btn-ban"
+                    (click)="banUser(row)"
+                    [disabled]="isCurrentAdmin(row)"
+                  >
+                    Ban
+                  </button>
+                  <button *ngIf="row.banned" type="button" class="btn-unban" (click)="unbanUser(row)">
+                    Déban
+                  </button>
+                  <button
+                    *ngIf="row.user.role === 'boutique'"
+                    type="button"
+                    class="btn-approve"
+                    (click)="approveBoutique(row)"
+                  >
+                    Valider
+                  </button>
+                  <button
+                    *ngIf="row.user.role === 'boutique'"
+                    type="button"
+                    class="btn-reject"
+                    (click)="rejectBoutique(row)"
+                  >
+                    Rejeter
+                  </button>
+                  <button type="button" class="btn-history" (click)="openHistoryModal(row)">
+                    Historique
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-delete"
+                    (click)="deleteUser(row)"
+                    [disabled]="isCurrentAdmin(row)"
+                  >
+                    Supprimer
+                  </button>
+                </div>
               </td>
             </tr>
             <tr *ngIf="filteredRows.length === 0">
@@ -244,6 +265,32 @@ type UserRow = {
       .toolbar {
         margin-top: 0.9rem;
       }
+      .stats-grid {
+        margin-top: 0.9rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.7rem;
+      }
+      .stat-card {
+        border: 1px solid #d5e4f1;
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.75rem 0.85rem;
+        box-shadow: 0 8px 18px rgba(8, 39, 67, 0.05);
+      }
+      .label {
+        margin: 0;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        color: #5d768f;
+        font-weight: 700;
+      }
+      .value {
+        margin: 0.2rem 0 0;
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #10243a;
+      }
       .search-input {
         width: 100%;
         border: 1px solid #c9dced;
@@ -269,6 +316,7 @@ type UserRow = {
         border-radius: 14px;
         background: #fff;
         overflow-x: auto;
+        box-shadow: 0 10px 24px rgba(8, 39, 67, 0.06);
       }
       table {
         width: 100%;
@@ -285,6 +333,11 @@ type UserRow = {
         color: #59728a;
         font-size: 0.78rem;
         text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #f6fbff;
+      }
+      tbody tr:hover {
+        background: #f8fcff;
       }
       .badge {
         border-radius: 999px;
@@ -352,6 +405,11 @@ type UserRow = {
         cursor: pointer;
         margin-left: 0.3rem;
         font-size: 1rem;
+      }
+      .action-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
       }
       .btn-history {
         background: #e8f4fd;
@@ -477,6 +535,16 @@ type UserRow = {
       .btn-secondary:hover {
         background: #f8f9fa;
       }
+      @media (max-width: 900px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 600px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     `,
   ],
 })
@@ -534,6 +602,20 @@ export class AdminUsersComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  get pendingBoutiquesCount(): number {
+    return this.rows.filter((r) => r.user.role === 'boutique' && r.user.boutiqueStatus === 'pending')
+      .length;
+  }
+
+  get approvedBoutiquesCount(): number {
+    return this.rows.filter((r) => r.user.role === 'boutique' && r.user.boutiqueStatus === 'approved')
+      .length;
+  }
+
+  get bannedCount(): number {
+    return this.rows.filter((r) => r.banned).length;
   }
 
   loadUsers(showLoader = true): void {

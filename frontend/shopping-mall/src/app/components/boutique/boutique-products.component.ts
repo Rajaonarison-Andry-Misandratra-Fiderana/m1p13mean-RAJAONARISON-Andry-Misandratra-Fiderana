@@ -21,6 +21,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   loading = true;
   error: string | null = null;
   createError: string | null = null;
+  publishAccessMessage: string | null = null;
   isSeller = false;
   boutiqueStatus: 'pending' | 'approved' | 'rejected' | '' = '';
   assignedBox = '';
@@ -64,6 +65,17 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     this.authService.currentUser$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
       this.boutiqueStatus = user?.boutiqueStatus || '';
       this.assignedBox = user?.assignedBox || '';
+      this.publishAccessMessage = this.getPublishAccessMessage();
+    });
+
+    this.authService.getProfile().subscribe({
+      next: () => {
+        this.publishAccessMessage = this.getPublishAccessMessage();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.publishAccessMessage = this.getPublishAccessMessage();
+      },
     });
 
     this.authService.currentUser$
@@ -116,6 +128,11 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   }
 
   openCreateModal(): void {
+    if (!this.canPublishNow()) {
+      this.publishAccessMessage = this.getPublishAccessMessage();
+      this.cdr.detectChanges();
+      return;
+    }
     this.createError = null;
     this.showCreateModal = true;
   }
@@ -294,6 +311,20 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   canPublishNow(): boolean {
     return this.isSeller && this.boutiqueStatus === 'approved' && !!this.assignedBox;
+  }
+
+  private getPublishAccessMessage(): string | null {
+    if (!this.isSeller) return null;
+    if (this.boutiqueStatus === 'pending') {
+      return "Votre boutique est en attente de validation par l'administrateur.";
+    }
+    if (this.boutiqueStatus === 'rejected') {
+      return 'Votre boutique a été rejetée. Contactez un administrateur.';
+    }
+    if (this.boutiqueStatus === 'approved' && !this.assignedBox) {
+      return "Votre boutique est validée mais aucun box n'est encore attribué.";
+    }
+    return null;
   }
 
   canPublishProduct(): boolean {
