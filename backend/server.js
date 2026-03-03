@@ -5,7 +5,6 @@ require("dotenv").config();
 
 const app = express();
 const connectDB = require("./config/db");
-connectDB();
 
 // Middleware
 app.use(cors());
@@ -40,6 +39,16 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Serveur lancé sur le port ${PORT}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(PORT, () => {
+      console.log(`Serveur lancé sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Impossible de démarrer le serveur:", error.message);
+    process.exit(1);
+  }
+};
+
+startServer();
