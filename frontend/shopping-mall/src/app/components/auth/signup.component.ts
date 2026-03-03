@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './signup.component.html',
   styleUrls: ['./signup.component.css']
 })
-export class SignupComponent implements OnInit {
+export class SignupComponent implements OnInit, OnDestroy {
   signupForm!: FormGroup;
   loading = false;
   submitted = false;
@@ -25,6 +25,7 @@ export class SignupComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    document.body.classList.add('auth-no-scroll');
     this.signupForm = this.formBuilder.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
@@ -34,6 +35,10 @@ export class SignupComponent implements OnInit {
     }, {
       validators: this.passwordMatchValidator
     });
+  }
+
+  ngOnDestroy(): void {
+    document.body.classList.remove('auth-no-scroll');
   }
 
   get f() { return this.signupForm.controls; }

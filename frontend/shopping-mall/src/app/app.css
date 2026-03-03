@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+:root {
+  --app-nav-height: 76px;
+}
+
 html,
 body {
   height: 100%;
@@ -17,6 +21,10 @@ body {
     #f3f8fd;
   color: #152d46;
   line-height: 1.55;
+}
+
+body.auth-no-scroll {
+  overflow: hidden;
 }
 
 h1,

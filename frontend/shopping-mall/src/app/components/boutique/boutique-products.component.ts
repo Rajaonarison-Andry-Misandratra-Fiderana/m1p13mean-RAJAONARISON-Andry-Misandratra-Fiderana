@@ -35,6 +35,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   showCreateModal = false;
   showEditModal = false;
+  isPublishing = false;
   selectedFile: File | null = null;
   previewImage: string | null = null;
   categories = PRODUCT_CATEGORIES;
@@ -110,6 +111,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   closeCreateModal(): void {
     this.showCreateModal = false;
+    this.isPublishing = false;
     this.selectedFile = null;
     this.previewImage = null;
     this.newProduct = {
@@ -199,6 +201,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   createProduct(e: Event): void {
     e.preventDefault();
+    if (this.isPublishing) return;
     if (!this.isSeller) {
       alert('Only sellers can create products.');
       return;
@@ -232,10 +235,13 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     }
 
     // Send to backend and rely on server for persistence. On error, show helpful message.
+    this.isPublishing = true;
     this.productService.createProduct(requestPayload).subscribe({
       next: (prod) => {
+        this.products = [prod, ...this.products];
         this.closeCreateModal();
         this.loadProducts(shopId);
+        this.isPublishing = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -247,7 +253,11 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
         }
         if (err?.status === 500)
           msg += ' Erreur 500 — erreur côté serveur. Consultez les logs backend.';
+        if (err?.status === 413)
+          msg +=
+            " Erreur 413 — image trop volumineuse. Réduisez la taille de l'image puis réessayez.";
         alert(msg + ' Voir la console pour plus de détails.');
+        this.isPublishing = false;
         this.cdr.detectChanges();
       },
     });

@@ -3,7 +3,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  min-height: calc(100dvh - var(--app-nav-height, 76px));
+  height: calc(100dvh - var(--app-nav-height, 76px));
   padding: 2rem;
   background: linear-gradient(135deg, #0a1a2b 0%, #1a3b4f 100%);
   position: relative;

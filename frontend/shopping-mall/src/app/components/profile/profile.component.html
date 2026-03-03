@@ -38,7 +38,7 @@
           <a *ngIf="currentUser.role === 'boutique'" href="/boutique/dashboard" class="link-btn">
             Voir le tableau de bord boutique
           </a>
-          <a *ngIf="currentUser.role === 'acheteur'" href="/buyer/orders" class="link-btn">
+          <a *ngIf="currentUser.role === 'acheteur'" routerLink="/cart" class="link-btn">
             Voir mes commandes
           </a>
           <a *ngIf="currentUser.role === 'admin'" href="/admin/dashboard" class="link-btn">
