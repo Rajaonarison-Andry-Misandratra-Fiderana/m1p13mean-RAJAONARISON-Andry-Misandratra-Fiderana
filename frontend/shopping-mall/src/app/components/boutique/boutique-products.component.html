@@ -34,6 +34,7 @@
     <div class="modal">
       <h2>Nouveau produit</h2>
       <form (submit)="createProduct($event)">
+        <div *ngIf="createError" class="status-panel error">{{ createError }}</div>
         <div class="field">
           <label>Nom</label>
           <input type="text" [(ngModel)]="newProduct.name" name="name" required />
@@ -70,7 +71,7 @@
 
         <div class="field">
           <label>Image</label>
-          <input type="file" (change)="onFileSelected($event)" accept="image/*" required />
+          <input type="file" (change)="onFileSelected($event)" accept="image/*" />
           <img *ngIf="previewImage" [src]="previewImage" class="preview" alt="Aperçu" />
         </div>
 

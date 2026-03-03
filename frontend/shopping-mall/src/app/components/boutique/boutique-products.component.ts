@@ -20,6 +20,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   products: Product[] = [];
   loading = true;
   error: string | null = null;
+  createError: string | null = null;
   isSeller = false;
   private destroy$ = new Subject<void>();
 
@@ -106,12 +107,14 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   }
 
   openCreateModal(): void {
+    this.createError = null;
     this.showCreateModal = true;
   }
 
   closeCreateModal(): void {
     this.showCreateModal = false;
     this.isPublishing = false;
+    this.createError = null;
     this.selectedFile = null;
     this.previewImage = null;
     this.newProduct = {
@@ -202,14 +205,15 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
   createProduct(e: Event): void {
     e.preventDefault();
     if (this.isPublishing) return;
+    this.createError = null;
     if (!this.isSeller) {
-      alert('Only sellers can create products.');
+      this.createError = 'Seuls les vendeurs peuvent publier un produit.';
       return;
     }
 
     const shopId = getEntityId(this.authService.currentUserValue);
     if (!shopId) {
-      alert("Votre compte vendeur n'est pas identifié. Veuillez vous reconnecter.");
+      this.createError = "Votre compte vendeur n'est pas identifié. Veuillez vous reconnecter.";
       return;
     }
 
@@ -228,9 +232,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     };
 
     if (!this.canPublishProduct()) {
-      alert(
-        'Veuillez remplir tous les champs (nom, description, prix, stock, emplacement, catégorie, image) avant publication.',
-      );
+      this.createError = 'Veuillez remplir au moins le nom, le prix et le stock.';
       return;
     }
 
@@ -256,7 +258,7 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
         if (err?.status === 413)
           msg +=
             " Erreur 413 — image trop volumineuse. Réduisez la taille de l'image puis réessayez.";
-        alert(msg + ' Voir la console pour plus de détails.');
+        this.createError = msg;
         this.isPublishing = false;
         this.cdr.detectChanges();
       },
@@ -277,22 +279,14 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
 
   canPublishProduct(): boolean {
     const name = String(this.newProduct.name || '').trim();
-    const description = String(this.newProduct.description || '').trim();
-    const location = String(this.newProduct.location || '').trim();
-    const category = String(this.newProduct.category || '').trim();
     const price = Number(this.newProduct.price || 0);
     const stock = Number(this.newProduct.stock || 0);
-    const hasImage = !!this.previewImage;
     return (
       !!name &&
-      !!description &&
-      !!location &&
-      !!category &&
       Number.isFinite(price) &&
       price > 0 &&
       Number.isFinite(stock) &&
-      stock >= 0 &&
-      hasImage
+      stock >= 0
     );
   }
 }
