@@ -25,8 +25,13 @@ import { getEntityId } from '../../utils/id.util';
         <article class="panel">
           <h2>Articles sélectionnés</h2>
 
-          <div class="checkout-item" *ngFor="let item of items">
-            <img [src]="item.product.image || '/assets/placeholder.png'" [alt]="item.product.name" />
+          <div class="checkout-item" *ngFor="let item of items; trackBy: trackByCheckoutItem">
+            <img
+              [src]="item.product.image || '/assets/placeholder.png'"
+              [alt]="item.product.name"
+              loading="lazy"
+              decoding="async"
+            />
             <div class="item-main">
               <p class="name">{{ item.product.name }}</p>
               <p class="price">{{ item.product.price | number: '1.0-0' }} MGA</p>
@@ -294,6 +299,9 @@ export class CheckoutComponent implements OnInit {
   get totalAmount(): number {
     return this.items.reduce((total, item) => total + item.product.price * item.quantity, 0);
   }
+
+  trackByCheckoutItem = (_index: number, item: CartItem): string =>
+    getEntityId(item.product) || item.product.name || String(_index);
 
   constructor(
     private route: ActivatedRoute,

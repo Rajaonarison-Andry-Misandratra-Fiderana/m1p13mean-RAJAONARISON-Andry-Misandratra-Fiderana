@@ -58,9 +58,9 @@
       </div>
 
       <div *ngIf="!loading && filteredProducts.length > 0" class="products-grid">
-        <div *ngFor="let product of filteredProducts" class="product-card" (click)="openProductPopup(product)">
+        <div *ngFor="let product of filteredProducts; trackBy: trackByProductId" class="product-card" (click)="openProductPopup(product)">
           <div class="product-image">
-            <img [src]="product.image || '/assets/placeholder.png'" [alt]="product.name">
+            <img [src]="product.image || '/assets/placeholder.png'" [alt]="product.name" loading="lazy" decoding="async">
             <span *ngIf="product.stock <= 0" class="out-of-stock">Rupture de stock</span>
             <span *ngIf="product.rating" class="rating">
               ⭐ {{ product.rating.toFixed(1) }}
@@ -93,7 +93,7 @@
 <div *ngIf="selectedProduct" class="product-popup-overlay" (click)="closeProductPopup()">
   <div class="product-popup" (click)="$event.stopPropagation()">
     <button class="popup-close" (click)="closeProductPopup()">×</button>
-    <img [src]="selectedProduct.image || '/assets/placeholder.png'" [alt]="selectedProduct.name" />
+    <img [src]="selectedProduct.image || '/assets/placeholder.png'" [alt]="selectedProduct.name" loading="eager" decoding="async" />
     <h3>{{ selectedProduct.name }}</h3>
     <div class="popup-meta">
       <span class="popup-chip">{{ getCategoryLabel(selectedProduct.category) }}</span>

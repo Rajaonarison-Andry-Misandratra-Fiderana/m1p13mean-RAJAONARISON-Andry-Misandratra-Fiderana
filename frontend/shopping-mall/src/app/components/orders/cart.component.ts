@@ -32,8 +32,13 @@ import { getEntityId } from '../../utils/id.util';
 
       <div *ngIf="items.length > 0" class="cart-layout">
         <article class="cart-items panel">
-          <div class="item" *ngFor="let item of items">
-            <img [src]="item.product.image || '/assets/placeholder.png'" [alt]="item.product.name" />
+          <div class="item" *ngFor="let item of items; trackBy: trackByCartItem">
+            <img
+              [src]="item.product.image || '/assets/placeholder.png'"
+              [alt]="item.product.name"
+              loading="lazy"
+              decoding="async"
+            />
 
             <div class="item-main">
               <p class="name">{{ item.product.name }}</p>
@@ -218,6 +223,9 @@ export class CartComponent implements OnInit, OnDestroy {
   totalQuantity = 0;
   totalAmount = 0;
   private destroy$ = new Subject<void>();
+
+  trackByCartItem = (_index: number, item: CartItem): string =>
+    getEntityId(item.product) || item.product.name || String(_index);
 
   constructor(
     private cartService: CartService,

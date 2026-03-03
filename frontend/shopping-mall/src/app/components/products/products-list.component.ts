@@ -178,4 +178,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     const translated = toFrenchCategory(category);
     return translated || 'Sans catégorie';
   }
+
+  trackByProductId = (_index: number, product: Product): string =>
+    getEntityId(product) || product.name || String(_index);
 }

@@ -111,6 +111,9 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
     return getEntityId(product);
   }
 
+  trackByProduct = (_index: number, product: Product): string =>
+    getEntityId(product) || product.name || String(_index);
+
   loadProducts(shopId: string): void {
     this.loading = true;
     this.error = null;

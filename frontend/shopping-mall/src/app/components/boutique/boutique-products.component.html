@@ -22,8 +22,8 @@
   </div>
 
   <div *ngIf="!loading && products.length > 0" class="products-grid">
-    <article *ngFor="let p of products" class="product-card">
-      <img [src]="p.image || '/assets/placeholder.png'" alt="{{ p.name }}" />
+    <article *ngFor="let p of products; trackBy: trackByProduct" class="product-card">
+      <img [src]="p.image || '/assets/placeholder.png'" alt="{{ p.name }}" loading="lazy" decoding="async" />
       <div class="card-content">
         <h3>{{ p.name }}</h3>
         <p class="meta">{{ getCategoryLabel(p.category) }}</p>
@@ -74,7 +74,7 @@
         <div class="field">
           <label>Image</label>
           <input type="file" (change)="onFileSelected($event)" accept="image/*" required />
-          <img *ngIf="previewImage" [src]="previewImage" class="preview" alt="Aperçu" />
+          <img *ngIf="previewImage" [src]="previewImage" class="preview" alt="Aperçu" decoding="async" />
         </div>
 
         <div class="modal-actions">

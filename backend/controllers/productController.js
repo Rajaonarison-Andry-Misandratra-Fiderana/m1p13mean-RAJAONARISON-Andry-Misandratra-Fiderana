@@ -67,8 +67,11 @@ exports.createProduct = async (req, res) => {
 // READ ALL with filters
 exports.getProducts = async (req, res) => {
   try {
-    const { category, shop, search, minPrice, maxPrice } = req.query;
+    const { category, shop, search, minPrice, maxPrice, page, limit } = req.query;
     let filter = { isActive: true };
+    const parsedPage = Math.max(1, Number.parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 0));
+    const skip = parsedLimit ? (parsedPage - 1) * parsedLimit : 0;
 
     if (category) filter.category = category;
     if (shop) filter.shop = shop;
@@ -80,13 +83,24 @@ exports.getProducts = async (req, res) => {
     }
     if (minPrice || maxPrice) {
       filter.price = {};
-      if (minPrice) filter.price.$gte = minPrice;
-      if (maxPrice) filter.price.$lte = maxPrice;
+      const parsedMin = Number(minPrice);
+      const parsedMax = Number(maxPrice);
+      if (Number.isFinite(parsedMin)) filter.price.$gte = parsedMin;
+      if (Number.isFinite(parsedMax)) filter.price.$lte = parsedMax;
+      if (Object.keys(filter.price).length === 0) delete filter.price;
     }
 
-    const products = await Product.find(filter)
+    let query = Product.find(filter)
+      .select("name price stock description location image category rating shop isActive createdAt")
       .populate("shop", "name email")
-      .populate("reviews.user", "name");
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (parsedLimit) {
+      query = query.skip(skip).limit(parsedLimit);
+    }
+
+    const products = await query;
     res.json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -204,8 +218,10 @@ exports.getProductsByShop = async (req, res) => {
       shop: req.params.shopId,
       isActive: true,
     })
+      .select("name price stock description location image category rating shop isActive createdAt")
       .populate("shop", "name email")
-      .populate("reviews.user", "name");
+      .sort({ createdAt: -1 })
+      .lean();
     res.json(products);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -225,8 +241,10 @@ exports.getAdminVisibleProducts = async (req, res) => {
       shop: { $in: sellerIds },
       isActive: true,
     })
+      .select("name price stock description location image category rating shop isActive createdAt")
       .populate("shop", "name email")
-      .populate("reviews.user", "name");
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(products);
   } catch (err) {
