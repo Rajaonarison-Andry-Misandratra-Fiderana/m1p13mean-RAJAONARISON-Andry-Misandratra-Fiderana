@@ -12,6 +12,11 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    clientRequestId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     items: [
       {
         product: {
@@ -100,6 +105,11 @@ const orderSchema = new mongoose.Schema(
     notes: String,
   },
   { timestamps: true },
+);
+
+orderSchema.index(
+  { buyer: 1, clientRequestId: 1 },
+  { unique: true, partialFilterExpression: { clientRequestId: { $type: "string" } } },
 );
 
 module.exports = mongoose.model("Order", orderSchema);

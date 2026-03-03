@@ -52,6 +52,7 @@ export interface ShippingAddress {
 }
 
 export interface CreateOrderRequest {
+  clientRequestId?: string;
   items: {
     product: string;
     quantity: number;

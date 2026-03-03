@@ -92,13 +92,13 @@ import { getEntityId } from '../../utils/id.util';
             <button
               type="button"
               class="btn-stripe"
-              [disabled]="!canCheckout()"
+              [disabled]="!canCheckout() || processingPayment"
               (click)="payWithStripe()"
             >
               Payer avec Stripe
             </button>
-            <button type="submit" class="btn-primary" [disabled]="!canConfirmOrder()">
-              Confirmer la commande
+            <button type="submit" class="btn-primary" [disabled]="!canConfirmOrder() || processingPayment">
+              {{ processingPayment ? 'Traitement...' : 'Confirmer la commande' }}
             </button>
           </div>
           <p class="hint" *ngIf="!stripePaymentLink">
@@ -255,6 +255,8 @@ export class CheckoutComponent implements OnInit {
   loading = true;
   error = '';
   stripePaymentStarted = false;
+  processingPayment = false;
+  private checkoutRequestId: string | null = null;
 
   form = {
     fullName: '',
@@ -390,7 +392,10 @@ export class CheckoutComponent implements OnInit {
 
   confirmOrder(e: Event): void {
     e.preventDefault();
+    if (this.processingPayment) return;
     if (!this.canConfirmOrder()) return;
+    this.processingPayment = true;
+    this.error = '';
 
     const orderItems = this.items
       .map((item) => {
@@ -411,11 +416,17 @@ export class CheckoutComponent implements OnInit {
 
     if (orderItems.length !== this.items.length) {
       this.error = 'Identifiants produit/boutique invalides.';
+      this.processingPayment = false;
       return;
+    }
+
+    if (!this.checkoutRequestId) {
+      this.checkoutRequestId = this.generateClientRequestId();
     }
 
     this.orderService
       .createOrder({
+        clientRequestId: this.checkoutRequestId,
         items: orderItems,
         shippingAddress: {
           street: this.form.street.trim(),
@@ -442,12 +453,22 @@ export class CheckoutComponent implements OnInit {
           }
 
           this.cartService.clear();
+          this.checkoutRequestId = null;
+          this.processingPayment = false;
           alert('Paiement validé. Montant transféré au vendeur et stock mis à jour.');
           this.router.navigate(['/buyer/orders']);
         },
         error: (err) => {
           this.error = err?.error?.message || 'Échec de la création de commande.';
+          this.processingPayment = false;
         },
       });
+  }
+
+  private generateClientRequestId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }

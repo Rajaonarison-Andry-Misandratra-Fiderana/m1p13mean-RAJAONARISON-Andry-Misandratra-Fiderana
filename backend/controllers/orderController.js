@@ -60,7 +60,17 @@ const buildTransactionSnapshot = (order) => {
 // CREATE ORDER
 exports.createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, clientRequestId } = req.body;
+
+    if (clientRequestId) {
+      const existingOrder = await Order.findOne({ buyer: req.user.id, clientRequestId })
+        .populate("buyer", "name email")
+        .populate("items.product", "name price image")
+        .populate("items.shop", "name email");
+      if (existingOrder) {
+        return res.json(existingOrder);
+      }
+    }
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: "Order must contain items" });
@@ -85,6 +95,7 @@ exports.createOrder = async (req, res) => {
     const order = new Order({
       orderNumber,
       buyer: req.user.id,
+      clientRequestId: clientRequestId ? String(clientRequestId).trim() : undefined,
       items,
       totalAmount,
       shippingAddress,
@@ -100,6 +111,16 @@ exports.createOrder = async (req, res) => {
 
     res.status(201).json(order);
   } catch (err) {
+    if (err?.code === 11000 && req.body?.clientRequestId) {
+      const existingOrder = await Order.findOne({
+        buyer: req.user.id,
+        clientRequestId: req.body.clientRequestId,
+      })
+        .populate("buyer", "name email")
+        .populate("items.product", "name price image")
+        .populate("items.shop", "name email");
+      if (existingOrder) return res.json(existingOrder);
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -236,6 +257,10 @@ exports.updatePaymentStatus = async (req, res) => {
 
     if (!isBuyer && !isAdmin) {
       return res.status(403).json({ message: "Not authorized" });
+    }
+
+    if (paymentStatus === "completed" && order.paymentStatus === "completed") {
+      return res.json(order);
     }
 
     order.paymentStatus = paymentStatus;
