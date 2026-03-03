@@ -199,7 +199,7 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
                     type="button"
                     class="btn-delete"
                     (click)="deleteProduct(p)"
-                    [disabled]="savingProducts.has(getEntityId(p))"
+                    [disabled]="!canDeleteProduct(p) || savingProducts.has(getEntityId(p))"
                   >
                     Supprimer
                   </button>
@@ -556,7 +556,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   get recentProducts(): Product[] {
-    return [...this.products]
+    return [...this.products, ...this.getHistoricalSoldProducts()]
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 12);
   }
@@ -680,6 +680,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return product.shop.name || product.shop.email || getEntityId(product.shop);
   }
 
+  canDeleteProduct(product: Product): boolean {
+    const id = getEntityId(product);
+    if (!id) return false;
+    return this.products.some((p) => getEntityId(p) === id);
+  }
+
   getUserCreatedAt(user: User): Date {
     if (user.createdAt) {
       const direct = new Date(user.createdAt);
@@ -733,5 +739,41 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     if (!Number.isNaN(parsed) && parsed > 0) return Math.floor(parsed);
 
     return 100;
+  }
+
+  private getHistoricalSoldProducts(): Product[] {
+    const activeIds = new Set(this.products.map((p) => getEntityId(p)).filter(Boolean));
+    const history = new Map<string, Product>();
+
+    for (const order of this.orders) {
+      const orderDate = order.createdAt;
+      for (const item of order.items || []) {
+        const itemProductId =
+          typeof item.product === 'string' ? item.product : getEntityId(item.product);
+        if (itemProductId && activeIds.has(itemProductId)) continue;
+
+        const itemName =
+          typeof item.product === 'object' && item.product?.name
+            ? item.product.name
+            : 'Produit supprimé';
+        const key =
+          itemProductId ||
+          `deleted-${itemName.replace(/\s+/g, '-').toLowerCase()}-${Math.round(item.price || 0)}`;
+
+        if (!history.has(key)) {
+          history.set(key, {
+            _id: key,
+            name: itemName,
+            category: 'Historique (supprimé)',
+            price: Number(item.price || 0),
+            stock: 0,
+            shop: item.shop as Product['shop'],
+            createdAt: orderDate,
+          });
+        }
+      }
+    }
+
+    return Array.from(history.values());
   }
 }

@@ -95,9 +95,13 @@
     <button class="popup-close" (click)="closeProductPopup()">×</button>
     <img [src]="selectedProduct.image || '/assets/placeholder.png'" [alt]="selectedProduct.name" />
     <h3>{{ selectedProduct.name }}</h3>
+    <div class="popup-meta">
+      <span class="popup-chip">{{ selectedProduct.category || 'Sans catégorie' }}</span>
+      <span class="popup-chip">Box: {{ selectedProduct.location || 'Non renseigné' }}</span>
+      <span class="popup-chip">Stock: {{ selectedProduct.stock }}</span>
+    </div>
     <p class="popup-seller">Vendeur: {{ getSellerName(selectedProduct) }}</p>
     <p class="popup-price">{{ selectedProduct.price | number: '1.0-0' }} Ar</p>
-    <p class="popup-stock">Stock: {{ selectedProduct.stock }}</p>
     <p class="popup-desc">{{ selectedProduct.description || 'Aucune description disponible.' }}</p>
     <button
       *ngIf="isBuyer"

@@ -116,44 +116,68 @@ export class BoutiqueDashboardComponent implements OnInit, OnDestroy {
   }
 
   private computeDashboard(products: Product[], orders: Order[]): void {
-    const rows = products.map((product) => {
+    const rowsMap = new Map<string, ProductDashboardRow>();
+    const rowOrderKeys = new Map<string, Set<string>>();
+
+    for (const product of products) {
       const productId = getEntityId(product);
-      const clicks = getProductClicks(productId);
-
-      let unitsSold = 0;
-      let salesAmount = 0;
-      let orderCount = 0;
-
-      for (const order of orders) {
-        const matchedItems = order.items.filter((item) => {
-          if (typeof item.product === 'string') return item.product === productId;
-          return getEntityId(item.product) === productId;
-        });
-
-        if (matchedItems.length > 0) {
-          orderCount += 1;
-          for (const item of matchedItems) {
-            unitsSold += item.quantity || 0;
-            salesAmount += (item.price || product.price || 0) * (item.quantity || 0);
-          }
-        }
-      }
-
-      return {
+      if (!productId) continue;
+      rowsMap.set(productId, {
         id: productId,
         name: product.name,
         category: product.category || 'Sans catégorie',
         price: product.price,
         stock: product.stock,
-        clicks,
-        unitsSold,
-        salesAmount,
-        orderCount,
-      } as ProductDashboardRow;
-    });
+        clicks: getProductClicks(productId),
+        unitsSold: 0,
+        salesAmount: 0,
+        orderCount: 0,
+      });
+    }
 
+    for (const order of orders) {
+      const orderKey = getEntityId(order) || order.orderNumber || `order-${Date.now()}`;
+      for (const item of order.items || []) {
+        const productId =
+          typeof item.product === 'string' ? item.product : getEntityId(item.product);
+        const fallbackName =
+          typeof item.product === 'object' && item.product?.name
+            ? item.product.name
+            : 'Produit supprimé';
+        const rowId =
+          productId ||
+          `deleted-${orderKey}-${fallbackName.replace(/\s+/g, '-').toLowerCase()}`;
+
+        let row = rowsMap.get(rowId);
+        if (!row) {
+          row = {
+            id: rowId,
+            name: fallbackName,
+            category: 'Produit supprimé',
+            price: Number(item.price || 0),
+            stock: 0,
+            clicks: 0,
+            unitsSold: 0,
+            salesAmount: 0,
+            orderCount: 0,
+          };
+          rowsMap.set(rowId, row);
+        }
+
+        row.unitsSold += item.quantity || 0;
+        row.salesAmount += Number(item.price || row.price || 0) * (item.quantity || 0);
+        if (!rowOrderKeys.has(rowId)) rowOrderKeys.set(rowId, new Set<string>());
+        rowOrderKeys.get(rowId)?.add(orderKey);
+      }
+    }
+
+    for (const [rowId, row] of rowsMap.entries()) {
+      row.orderCount = rowOrderKeys.get(rowId)?.size || 0;
+    }
+
+    const rows = Array.from(rowsMap.values());
     this.productRows = rows.sort((a, b) => b.salesAmount - a.salesAmount);
-    this.productsCount = rows.length;
+    this.productsCount = products.length;
     this.ordersCount = orders.length;
     this.totalSales = rows.reduce((sum, row) => sum + row.salesAmount, 0);
     this.totalClicks = rows.reduce((sum, row) => sum + row.clicks, 0);
