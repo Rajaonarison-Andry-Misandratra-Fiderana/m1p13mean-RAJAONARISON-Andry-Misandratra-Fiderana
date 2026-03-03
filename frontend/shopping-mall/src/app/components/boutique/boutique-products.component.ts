@@ -249,6 +249,8 @@ export class BoutiqueProductsComponent implements OnInit, OnDestroy {
       error: (err) => {
         let msg = 'Impossible de créer le produit sur le serveur.';
         if (err?.status === 401) msg += ' Erreur 401 — non autorisé. Vérifiez la connexion.';
+        if (err?.status === 403)
+          msg += ' Erreur 403 — accès refusé. Votre compte doit être rôle boutique/admin.';
         if (err?.status === 400) {
           const backendReason = err?.error?.message ? ` Détail: ${err.error.message}` : '';
           msg += ` Erreur 400 — requête invalide. Vérifiez les champs.${backendReason}`;
