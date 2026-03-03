@@ -1,6 +1,5 @@
 import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router } from '@angular/router';
 import { EMPTY, Subject, forkJoin, fromEvent, merge, of, timer } from 'rxjs';
 import { catchError, filter, takeUntil } from 'rxjs/operators';
@@ -12,12 +11,10 @@ import { User } from '../../models/user.model';
 import { Order } from '../../models/order.model';
 import { getEntityId } from '../../utils/id.util';
 
-type PaymentStatus = 'pending' | 'completed' | 'failed';
-
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   template: `
     <section class="admin-page">
       <header class="page-head">
@@ -73,9 +70,7 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
                   <th>N°</th>
                   <th>Acheteur</th>
                   <th>Montant</th>
-                  <th>Paiement</th>
                   <th>Date</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,31 +78,11 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
                   <td>{{ order.orderNumber || getEntityId(order) }}</td>
                   <td>{{ getBuyerLabel(order) }}</td>
                   <td>{{ order.totalAmount | number: '1.0-0' }} MGA</td>
-                  <td>
-                    <select
-                      [(ngModel)]="order.paymentStatus"
-                      [disabled]="savingOrders.has(getEntityId(order))"
-                    >
-                      <option value="pending">pending</option>
-                      <option value="completed">completed</option>
-                      <option value="failed">failed</option>
-                    </select>
-                  </td>
                   <td>{{ order.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="btn-inline"
-                      (click)="saveOrder(order)"
-                      [disabled]="!getEntityId(order) || savingOrders.has(getEntityId(order))"
-                    >
-                      Enregistrer
-                    </button>
-                  </td>
                 </tr>
 
                 <tr *ngIf="recentOrders.length === 0">
-                  <td colspan="6" class="empty">Aucune commande.</td>
+                  <td colspan="4" class="empty">Aucune commande.</td>
                 </tr>
               </tbody>
             </table>
@@ -350,15 +325,6 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
       tbody tr:hover {
         background: #f8fcff;
       }
-      select {
-        border: 1px solid #c9dced;
-        border-radius: 8px;
-        padding: 0.28rem 0.42rem;
-        font: inherit;
-        max-width: 132px;
-        width: 100%;
-      }
-      .btn-inline,
       .btn-delete {
         border: 0;
         border-radius: 8px;
@@ -366,10 +332,6 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
         font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
-      }
-      .btn-inline {
-        background: #e8f5ff;
-        color: #0d4f84;
       }
       .btn-delete {
         background: #fdecec;
@@ -429,13 +391,9 @@ type PaymentStatus = 'pending' | 'completed' | 'failed';
           padding: 0.54rem 0.44rem;
           font-size: 0.82rem;
         }
-        .btn-inline,
         .btn-delete {
           width: 100%;
           font-size: 0.8rem;
-        }
-        select {
-          max-width: none;
         }
       }
     `,
@@ -451,7 +409,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   apiBaseUrl = '';
   sellerCapacity = this.resolveSellerCapacity();
 
-  savingOrders = new Set<string>();
   savingUsers = new Set<string>();
   savingProducts = new Set<string>();
 
@@ -585,26 +542,6 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error = err?.error?.message || 'Impossible de charger les données admin.';
         this.loading = false;
-      },
-    });
-  }
-
-  saveOrder(order: Order): void {
-    const id = getEntityId(order);
-    if (!id) return;
-
-    const paymentStatus = order.paymentStatus as PaymentStatus;
-
-    this.savingOrders.add(id);
-
-    this.orderService.updatePaymentStatus(id, { paymentStatus }).subscribe({
-      next: () => {
-        this.savingOrders.delete(id);
-        this.loadDashboard(false);
-      },
-      error: (err) => {
-        this.savingOrders.delete(id);
-        this.error = err?.error?.message || 'Échec de mise à jour de la commande.';
       },
     });
   }
