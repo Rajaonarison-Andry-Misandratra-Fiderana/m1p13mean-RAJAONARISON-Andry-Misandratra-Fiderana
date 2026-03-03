@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './components/home/home.component';
 import { LoginComponent } from './components/auth/login.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import { AuthGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
@@ -32,8 +33,7 @@ export const routes: Routes = [
   {
     path: 'profile',
     canActivate: [AuthGuard],
-    loadComponent: () =>
-      import('./components/profile/profile.component').then((m) => m.ProfileComponent),
+    component: ProfileComponent,
   },
   {
     path: 'buyer/orders',
