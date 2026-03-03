@@ -51,6 +51,20 @@
       </button>
     </form>
 
+    <div class="quick-demo">
+      <p>Logins par défaut (démo)</p>
+      <div class="demo-users">
+        <button
+          type="button"
+          class="demo-user-btn"
+          *ngFor="let account of demoAccounts"
+          (click)="useDemoAccount(account.email, account.password)"
+        >
+          {{ account.label }}
+        </button>
+      </div>
+    </div>
+
     <div class="login-footer">
       <p>Pas encore de compte ? <a routerLink="/signup">Inscrivez-vous</a></p>
     </div>

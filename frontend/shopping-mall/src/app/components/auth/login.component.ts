@@ -16,6 +16,11 @@ export class LoginComponent implements OnInit, OnDestroy {
   loading = false;
   submitted = false;
   error = '';
+  readonly demoAccounts = [
+    { label: 'Acheteur', email: 'buyer@example.com', password: 'password123' },
+    { label: 'Vendeur', email: 'seller@example.com', password: 'password123' },
+    { label: 'Admin', email: 'admin@example.com', password: 'password123' },
+  ];
 
   constructor(
     private formBuilder: FormBuilder,
@@ -26,8 +31,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     document.body.classList.add('auth-no-scroll');
     this.loginForm = this.formBuilder.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      email: [this.demoAccounts[0].email, [Validators.required, Validators.email]],
+      password: [this.demoAccounts[0].password, [Validators.required, Validators.minLength(6)]]
     });
   }
 
@@ -36,6 +41,11 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   get f() { return this.loginForm.controls; }
+
+  useDemoAccount(email: string, password: string): void {
+    this.loginForm.patchValue({ email, password });
+    this.error = '';
+  }
 
   onSubmit(): void {
     this.submitted = true;
