@@ -121,7 +121,7 @@ a:hover {
 
 @media (max-width: 768px) {
   html {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   body {
@@ -150,7 +150,7 @@ a:hover {
       .checkout-page h1,
       .orders-page h1
     ) {
-    font-size: 1.45rem !important;
+    font-size: 1.28rem !important;
   }
 
   :where(
@@ -163,12 +163,16 @@ a:hover {
       .btn-validate,
       .btn-clear
     ) {
-    font-size: 0.86rem !important;
-    padding: 0.52rem 0.72rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.45rem 0.62rem !important;
   }
 
   :where(table th, table td) {
-    font-size: 0.8rem !important;
+    font-size: 0.74rem !important;
+  }
+
+  :where(.product-card img, .product-image img, .checkout-item img, .item img) {
+    max-height: 130px !important;
   }
 
   .container {
@@ -178,7 +182,7 @@ a:hover {
 
 @media (max-width: 480px) {
   html {
-    font-size: 14px;
+    font-size: 12.5px;
   }
 
   :where(.panel, .table-section, .settings-card, .profile-card, .modal) {
@@ -190,13 +194,13 @@ a:hover {
   }
 
   :where(.value) {
-    font-size: 1.15rem !important;
+    font-size: 1.02rem !important;
   }
 }
 
 @media (max-width: 380px) {
   html {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .container {

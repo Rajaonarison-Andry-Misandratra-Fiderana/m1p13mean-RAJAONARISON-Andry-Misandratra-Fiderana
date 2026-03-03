@@ -424,9 +424,9 @@
 
 @media (max-width: 768px) {
   .home-container {
-    height: auto;
+    height: calc(100dvh - var(--app-nav-height, 76px));
     min-height: calc(100dvh - var(--app-nav-height, 76px));
-    overflow-y: visible;
+    overflow-y: auto;
     scroll-snap-type: none;
   }
 
@@ -473,11 +473,11 @@
   .categories-section,
   .info-section,
   .cta-section {
-    min-height: auto;
+    min-height: calc(100dvh - var(--app-nav-height, 76px));
     scroll-snap-align: none;
     scroll-snap-stop: normal;
-    padding: 2.4rem 0;
-    align-items: flex-start;
+    padding: 1.4rem 0;
+    align-items: center;
   }
 
   .section-head {
@@ -502,6 +502,7 @@
 
 @media (max-width: 480px) {
   .home-container {
+    height: calc(100dvh - var(--app-nav-height, 76px));
     min-height: calc(100dvh - var(--app-nav-height, 76px));
   }
 

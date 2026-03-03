@@ -790,28 +790,42 @@
   }
 
   .products-header h1 {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
   }
 
   .products-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .product-card {
     max-width: 100%;
+    border-radius: 10px;
   }
 
   .product-image {
-    aspect-ratio: 16/10;
+    aspect-ratio: 1 / 1;
+  }
+
+  .product-info {
+    padding: 0.6rem;
   }
 
   .product-info h3 {
-    font-size: 1.1rem;
+    font-size: 0.84rem;
+    -webkit-line-clamp: 1;
   }
 
   .description {
-    font-size: 0.9rem;
+    display: none;
+  }
+
+  .category {
+    font-size: 0.66rem;
+  }
+
+  .price {
+    font-size: 0.82rem;
   }
 
   .product-popup {
@@ -842,6 +856,10 @@
   .product-popup {
     padding: 0.85rem;
     border-radius: 16px;
+  }
+
+  .products-grid {
+    gap: 0.45rem;
   }
 }
 
