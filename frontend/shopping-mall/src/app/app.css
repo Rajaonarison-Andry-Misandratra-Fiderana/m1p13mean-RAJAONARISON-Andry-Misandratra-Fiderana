@@ -120,12 +120,85 @@ a:hover {
 }
 
 @media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    line-height: 1.45;
+  }
+
+  :where(
+      .panel,
+      .stat-card,
+      .table-section,
+      .profile-card,
+      .settings-card,
+      .modal,
+      .order-card,
+      .product-card
+    ) {
+    border-radius: 10px !important;
+  }
+
+  :where(
+      .page-head h1,
+      .dashboard-header h1,
+      .products-header h1,
+      .profile-header h1,
+      .settings-head h1,
+      .checkout-page h1,
+      .orders-page h1
+    ) {
+    font-size: 1.45rem !important;
+  }
+
+  :where(
+      .btn-primary,
+      .btn-secondary,
+      .btn-refresh,
+      .btn-reset,
+      .btn-delete,
+      .btn-create-seller,
+      .btn-validate,
+      .btn-clear
+    ) {
+    font-size: 0.86rem !important;
+    padding: 0.52rem 0.72rem !important;
+  }
+
+  :where(table th, table td) {
+    font-size: 0.8rem !important;
+  }
+
   .container {
     padding: 0 1rem;
   }
 }
 
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  :where(.panel, .table-section, .settings-card, .profile-card, .modal) {
+    padding: 0.75rem !important;
+  }
+
+  :where(.label) {
+    font-size: 0.74rem !important;
+  }
+
+  :where(.value) {
+    font-size: 1.15rem !important;
+  }
+}
+
 @media (max-width: 380px) {
+  html {
+    font-size: 13px;
+  }
+
   .container {
     padding: 0 0.75rem;
   }
