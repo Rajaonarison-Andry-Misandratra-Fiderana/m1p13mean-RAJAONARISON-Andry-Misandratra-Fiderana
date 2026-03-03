@@ -35,9 +35,7 @@ export class ProductService {
       if (filters.minPrice) params = params.set('minPrice', filters.minPrice.toString());
       if (filters.maxPrice) params = params.set('maxPrice', filters.maxPrice.toString());
     }
-    return this.http
-      .get<Product[]>(this.apiUrl, { params })
-      .pipe(map((products) => products.map((product) => this.withSyncedStock(product))));
+    return this.http.get<Product[]>(this.apiUrl, { params });
   }
 
   getProductById(id: string): Observable<Product> {
@@ -47,9 +45,7 @@ export class ProductService {
   }
 
   getProductsByShop(shopId: string): Observable<Product[]> {
-    return this.http
-      .get<Product[]>(`${this.apiUrl}/shop/${shopId}`)
-      .pipe(map((products) => products.map((product) => this.withSyncedStock(product))));
+    return this.http.get<Product[]>(`${this.apiUrl}/shop/${shopId}`);
   }
 
   getAdminVisibleProducts(): Observable<Product[]> {

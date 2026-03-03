@@ -52,11 +52,8 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(PORT, () => {
-      console.log(`Serveur lancé sur le port ${PORT}`);
-    });
+    app.listen(PORT);
   } catch (error) {
-    console.error("Impossible de démarrer le serveur:", error.message);
     process.exit(1);
   }
 };

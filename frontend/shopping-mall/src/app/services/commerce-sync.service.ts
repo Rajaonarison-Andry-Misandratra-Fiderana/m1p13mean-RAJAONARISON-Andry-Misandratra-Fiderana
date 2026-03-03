@@ -5,6 +5,7 @@ import { getEntityId } from '../utils/id.util';
 
 type TransferMap = Record<string, number>;
 type SoldMap = Record<string, number>;
+type ReservedMap = Record<string, number>;
 
 @Injectable({
   providedIn: 'root',
@@ -12,14 +13,26 @@ type SoldMap = Record<string, number>;
 export class CommerceSyncService {
   private readonly transferKey = 'shoppingMallSellerTransfers';
   private readonly soldKey = 'shoppingMallSoldOffsets';
+  private readonly reservedKey = 'shoppingMallCartReservedOffsets';
   private readonly refreshSubject = new Subject<void>();
   readonly refresh$ = this.refreshSubject.asObservable();
+
+  setCartReservations(items: CartItem[]): void {
+    const reserved: ReservedMap = {};
+    for (const item of items || []) {
+      const productId = getEntityId(item.product);
+      const qty = Number(item.quantity || 0);
+      if (!productId || qty <= 0) continue;
+      reserved[productId] = (reserved[productId] || 0) + qty;
+    }
+    this.writeReservedOffsets(reserved);
+    this.refreshSubject.next();
+  }
 
   recordValidatedPayment(items: CartItem[]): void {
     if (!items.length) return;
 
     const transfers = this.readTransfers();
-    const sold = this.readSoldOffsets();
 
     for (const item of items) {
       const productId = getEntityId(item.product);
@@ -30,11 +43,11 @@ export class CommerceSyncService {
 
       const amount = (item.product.price || 0) * item.quantity;
       transfers[shopId] = (transfers[shopId] || 0) + amount;
-      sold[productId] = (sold[productId] || 0) + item.quantity;
     }
 
     this.writeTransfers(transfers);
-    this.writeSoldOffsets(sold);
+    // Keep persisted sold offsets reset: stock is now decremented in backend DB at payment validation.
+    this.writeSoldOffsets({});
     this.refreshSubject.next();
   }
 
@@ -46,8 +59,8 @@ export class CommerceSyncService {
 
   applyStockOffset(stock: number, productId: string): number {
     if (!productId) return stock;
-    const sold = this.readSoldOffsets();
-    const offset = sold[productId] || 0;
+    const reserved = this.readReservedOffsets();
+    const offset = reserved[productId] || 0;
     return Math.max(0, (stock || 0) - offset);
   }
 
@@ -81,6 +94,22 @@ export class CommerceSyncService {
 
   private writeSoldOffsets(value: SoldMap): void {
     this.safeSet(this.soldKey, JSON.stringify(value));
+  }
+
+  private readReservedOffsets(): ReservedMap {
+    const raw = this.safeGet(this.reservedKey);
+    if (!raw) return {};
+
+    try {
+      const parsed = JSON.parse(raw) as ReservedMap;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private writeReservedOffsets(value: ReservedMap): void {
+    this.safeSet(this.reservedKey, JSON.stringify(value));
   }
 
   private safeGet(key: string): string | null {

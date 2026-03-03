@@ -16,21 +16,6 @@ export class AuthInterceptor implements HttpInterceptor {
         },
       });
     }
-    // Debug logging to help diagnose 401/500 from backend during development
-    try {
-      const auth = request.headers.get('Authorization');
-      // eslint-disable-next-line no-console
-      console.debug(
-        '[AuthInterceptor] ->',
-        request.method,
-        request.url,
-        'Authorization=',
-        auth ? '[REDACTED]' : auth,
-      );
-    } catch (e) {
-      // ignore
-    }
-
     return next.handle(request);
   }
 }
