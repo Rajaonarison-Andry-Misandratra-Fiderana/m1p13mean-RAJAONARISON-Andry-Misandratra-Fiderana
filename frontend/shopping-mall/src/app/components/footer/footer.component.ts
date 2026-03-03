@@ -37,7 +37,13 @@ export class FooterComponent implements OnInit, OnDestroy {
 
   private updateFooterVisibility(): void {
     const path = this.router.url.split('?')[0].split('#')[0];
-    const hiddenPaths = ['/admin/dashboard', '/admin/users', '/settings'];
+    const hiddenPaths = [
+      '/admin/dashboard',
+      '/admin/users',
+      '/settings',
+      '/boutique/dashboard',
+      '/boutique/products',
+    ];
     this.showFooter = !hiddenPaths.some(
       (hiddenPath) => path === hiddenPath || path.startsWith(`${hiddenPath}/`),
     );
