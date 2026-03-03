@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -17,6 +17,7 @@ import { User } from '../../models/user.model';
 export class NavbarComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isMenuOpen = false;
+  isUserMenuOpen = false;
   cartCount = 0;
   private destroy$ = new Subject<void>();
 
@@ -43,12 +44,28 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
+    if (!this.isMenuOpen) this.isUserMenuOpen = false;
+  }
+
+  toggleUserMenu(event: Event): void {
+    event.stopPropagation();
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
+
+  closeMenus(): void {
+    this.isMenuOpen = false;
+    this.isUserMenuOpen = false;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.isUserMenuOpen = false;
   }
 
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/']);
-    this.isMenuOpen = false;
+    this.closeMenus();
   }
 
   isAdmin(): boolean {

@@ -22,16 +22,16 @@
 
     <div class="navbar-menu" [class.active]="isMenuOpen">
       <div class="mobile-main-links">
-        <a routerLink="/" (click)="isMenuOpen = false" class="nav-link">Accueil</a>
-        <a routerLink="/products" (click)="isMenuOpen = false" class="nav-link">Produits</a>
-        <a routerLink="/profile" (click)="isMenuOpen = false" class="nav-link">Profil</a>
+        <a routerLink="/" (click)="closeMenus()" class="nav-link">Accueil</a>
+        <a routerLink="/products" (click)="closeMenus()" class="nav-link">Produits</a>
+        <a routerLink="/profile" (click)="closeMenus()" class="nav-link">Profil</a>
       </div>
       <div class="navbar-end">
         <ng-container *ngIf="!currentUser">
-          <a routerLink="/login" routerLinkActive="active" class="nav-link">
+          <a routerLink="/login" routerLinkActive="active" class="nav-link" (click)="closeMenus()">
             Connexion
           </a>
-          <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup">
+          <a routerLink="/signup" routerLinkActive="active" class="nav-link btn-signup" (click)="closeMenus()">
             S'inscrire
           </a>
         </ng-container>
@@ -53,19 +53,26 @@
             ⎋
           </button>
 
-          <div *ngIf="!isAcheteur()" class="nav-dropdown">
-            <button class="nav-link dropdown-toggle" aria-label="Ouvrir le menu utilisateur">☰</button>
-            <div class="dropdown-menu">
-              <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="dropdown-item">
+          <div *ngIf="!isAcheteur()" class="nav-dropdown" (click)="$event.stopPropagation()">
+            <button
+              class="nav-link dropdown-toggle"
+              aria-label="Ouvrir le menu utilisateur"
+              [attr.aria-expanded]="isUserMenuOpen"
+              (click)="toggleUserMenu($event)"
+            >
+              ☰
+            </button>
+            <div class="dropdown-menu" [class.open]="isUserMenuOpen">
+              <a *ngIf="isAdmin()" routerLink="/admin/dashboard" class="dropdown-item" (click)="closeMenus()">
                 Tableau de bord Admin
               </a>
-              <a *ngIf="isAdmin()" routerLink="/admin/users" class="dropdown-item">
+              <a *ngIf="isAdmin()" routerLink="/admin/users" class="dropdown-item" (click)="closeMenus()">
                 Gérer les utilisateurs
               </a>
-              <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="dropdown-item">
+              <a *ngIf="isBoutique()" routerLink="/boutique/dashboard" class="dropdown-item" (click)="closeMenus()">
                 Tableau de bord Boutique
               </a>
-              <a *ngIf="isBoutique()" routerLink="/boutique/products" class="dropdown-item">
+              <a *ngIf="isBoutique()" routerLink="/boutique/products" class="dropdown-item" (click)="closeMenus()">
                 Mes produits
               </a>
               <hr class="dropdown-divider">

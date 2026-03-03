@@ -354,8 +354,7 @@
   z-index: 1001;
 }
 
-.nav-dropdown:hover .dropdown-menu,
-.dropdown-menu:hover {
+.dropdown-menu.open {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -605,12 +604,18 @@
 
   .dropdown-menu {
     position: static;
-    opacity: 1;
-    visibility: visible;
-    transform: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
     margin-top: 0.5rem;
     width: 100%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  .dropdown-menu.open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
   }
 
   .dropdown-item {

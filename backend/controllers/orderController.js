@@ -1,6 +1,62 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 
+const toId = (value) => {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value._id) return String(value._id);
+  if (value.id) return String(value.id);
+  return "";
+};
+
+const buildTransactionSnapshot = (order) => {
+  const buyer =
+    typeof order.buyer === "object" && order.buyer
+      ? {
+          id: toId(order.buyer),
+          name: order.buyer.name || "",
+          email: order.buyer.email || "",
+        }
+      : { id: toId(order.buyer), name: "", email: "" };
+
+  const sellersMap = new Map();
+  const items = (order.items || []).map((item) => {
+    const shop = item.shop;
+    const sellerId = toId(shop);
+    const sellerName = typeof shop === "object" && shop ? shop.name || "" : "";
+    const sellerEmail = typeof shop === "object" && shop ? shop.email || "" : "";
+    if (sellerId && !sellersMap.has(sellerId)) {
+      sellersMap.set(sellerId, { id: sellerId, name: sellerName, email: sellerEmail });
+    }
+
+    const product = item.product;
+    return {
+      productId: toId(product),
+      productName: typeof product === "object" && product ? product.name || "" : "",
+      unitPrice: Number(item.price || 0),
+      quantity: Number(item.quantity || 0),
+      sellerId,
+      sellerName,
+    };
+  });
+
+  return {
+    buyer,
+    sellers: Array.from(sellersMap.values()),
+    shippingAddress: {
+      street: order.shippingAddress?.street || "",
+      city: order.shippingAddress?.city || "",
+      state: order.shippingAddress?.state || "",
+      zipCode: order.shippingAddress?.zipCode || "",
+      country: order.shippingAddress?.country || "",
+    },
+    items,
+    totalAmount: Number(order.totalAmount || 0),
+    paymentMethod: order.paymentMethod || "",
+    capturedAt: new Date(),
+  };
+};
+
 // CREATE ORDER
 exports.createOrder = async (req, res) => {
   try {
@@ -165,14 +221,17 @@ exports.updatePaymentStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid payment status" });
     }
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+      .populate("buyer", "name email")
+      .populate("items.product", "name price image")
+      .populate("items.shop", "name email");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
     // Check authorization (only admin or buyer)
-    const isBuyer = order.buyer.toString() === req.user.id;
+    const isBuyer = toId(order.buyer) === req.user.id;
     const isAdmin = req.user.role === "admin";
 
     if (!isBuyer && !isAdmin) {
@@ -180,13 +239,12 @@ exports.updatePaymentStatus = async (req, res) => {
     }
 
     order.paymentStatus = paymentStatus;
+    if (paymentStatus === "completed") {
+      order.paymentValidatedAt = new Date();
+      order.paymentValidatedBy = req.user.id;
+      order.transactionSnapshot = buildTransactionSnapshot(order);
+    }
     await order.save();
-
-    await order.populate([
-      { path: "buyer", select: "name email" },
-      { path: "items.product", select: "name price image" },
-      { path: "items.shop", select: "name email" },
-    ]);
 
     res.json(order);
   } catch (err) {

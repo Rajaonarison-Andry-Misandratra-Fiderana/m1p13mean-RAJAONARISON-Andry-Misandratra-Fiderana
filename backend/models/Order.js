@@ -58,6 +58,45 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "completed", "failed"],
       default: "pending",
     },
+    paymentValidatedAt: Date,
+    paymentValidatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    transactionSnapshot: {
+      buyer: {
+        id: String,
+        name: String,
+        email: String,
+      },
+      sellers: [
+        {
+          id: String,
+          name: String,
+          email: String,
+        },
+      ],
+      shippingAddress: {
+        street: String,
+        city: String,
+        state: String,
+        zipCode: String,
+        country: String,
+      },
+      items: [
+        {
+          productId: String,
+          productName: String,
+          unitPrice: Number,
+          quantity: Number,
+          sellerId: String,
+          sellerName: String,
+        },
+      ],
+      totalAmount: Number,
+      paymentMethod: String,
+      capturedAt: Date,
+    },
     notes: String,
   },
   { timestamps: true },
