@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const User = require("../models/User");
+const mongoose = require("mongoose");
 
 const toId = (value) => {
   if (!value) return "";
@@ -306,16 +307,66 @@ exports.updatePaymentStatus = async (req, res) => {
       return res.json(order);
     }
 
-    order.paymentStatus = paymentStatus;
     if (paymentStatus === "completed") {
-      order.paymentValidatedAt = new Date();
-      order.paymentValidatedBy = req.user.id;
-      order.transactionSnapshot = buildTransactionSnapshot(order);
-    }
-    await order.save();
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          const freshOrder = await Order.findById(req.params.id)
+            .populate("buyer", "name email")
+            .populate("items.product", "name price image")
+            .populate("items.shop", "name email")
+            .session(session);
 
-    res.json(order);
+          if (!freshOrder) {
+            throw new Error("Order not found");
+          }
+
+          if (freshOrder.paymentStatus === "completed") {
+            return;
+          }
+
+          for (const item of freshOrder.items || []) {
+            const productId = toId(item.product);
+            const qty = Number(item.quantity || 0);
+            if (!productId || qty <= 0) continue;
+
+            const updated = await Product.findOneAndUpdate(
+              { _id: productId, stock: { $gte: qty } },
+              { $inc: { stock: -qty } },
+              { new: true, session },
+            );
+            if (!updated) {
+              throw new Error(
+                `Insufficient stock to validate payment for product ${productId}.`,
+              );
+            }
+          }
+
+          freshOrder.paymentStatus = "completed";
+          freshOrder.paymentValidatedAt = new Date();
+          freshOrder.paymentValidatedBy = req.user.id;
+          freshOrder.transactionSnapshot = buildTransactionSnapshot(freshOrder);
+          await freshOrder.save({ session });
+        });
+      } finally {
+        await session.endSession();
+      }
+    } else {
+      order.paymentStatus = paymentStatus;
+      await order.save();
+    }
+
+    const updatedOrder = await Order.findById(req.params.id)
+      .populate("buyer", "name email")
+      .populate("items.product", "name price image")
+      .populate("items.shop", "name email");
+
+    res.json(updatedOrder);
   } catch (err) {
+    const message = String(err?.message || "");
+    if (message.includes("Insufficient stock")) {
+      return res.status(409).json({ message });
+    }
     res.status(500).json({ message: err.message });
   }
 };

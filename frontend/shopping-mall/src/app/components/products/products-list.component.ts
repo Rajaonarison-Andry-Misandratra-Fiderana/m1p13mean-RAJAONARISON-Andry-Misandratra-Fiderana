@@ -8,6 +8,7 @@ import { ProductService } from '../../services/product.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { SellerModerationService } from '../../services/seller-moderation.service';
+import { CommerceSyncService } from '../../services/commerce-sync.service';
 import { Product } from '../../models/product.model';
 import { PRODUCT_CATEGORIES, toFrenchCategory } from '../../constants/categories';
 import { getEntityId } from '../../utils/id.util';
@@ -40,6 +41,7 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     private router: Router,
     private cartService: CartService,
     private sellerModerationService: SellerModerationService,
+    private commerceSyncService: CommerceSyncService,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -55,6 +57,10 @@ export class ProductsListComponent implements OnInit, OnDestroy {
     this.sellerModerationService.refresh$
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.applyFilters());
+
+    this.commerceSyncService.refresh$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.loadProducts());
 
     this.router.events
       .pipe(

@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CartItem } from '../../models/cart.model';
 import { CartService } from '../../services/cart.service';
+import { CommerceSyncService } from '../../services/commerce-sync.service';
 import { getEntityId } from '../../utils/id.util';
 
 @Component({
@@ -43,7 +44,7 @@ import { getEntityId } from '../../utils/id.util';
             <div class="item-main">
               <p class="name">{{ item.product.name }}</p>
               <p class="meta">Prix: {{ item.product.price | number: '1.0-0' }} MGA</p>
-              <p class="meta">Stock dispo: {{ item.product.stock }}</p>
+              <p class="meta">Stock restant: {{ getRemainingStock(item) }}</p>
             </div>
 
             <div class="qty-actions">
@@ -229,6 +230,7 @@ export class CartComponent implements OnInit, OnDestroy {
 
   constructor(
     private cartService: CartService,
+    private commerceSyncService: CommerceSyncService,
     private router: Router,
   ) {}
 
@@ -271,5 +273,11 @@ export class CartComponent implements OnInit, OnDestroy {
 
   proceedToCheckout(): void {
     this.router.navigate(['/checkout']);
+  }
+
+  getRemainingStock(item: CartItem): number {
+    const productId = getEntityId(item.product);
+    if (!productId) return Math.max(0, Number(item.product.stock || 0));
+    return this.commerceSyncService.applyStockOffset(Number(item.product.stock || 0), productId);
   }
 }
